@@ -187,6 +187,46 @@ footer { color: var(--muted); font-size: .8rem; text-align: center; padding-top:
 #count { white-space: nowrap; font-size: .75rem; }
 .tools { flex-wrap: nowrap; gap: 4px; }
 .tools .ghost { padding: 8px 10px; }
+/* Game tabs scroll sideways on phones: arrows and edge fades show there is more */
+.wrap { gap: 28px; }
+.panels { gap: 28px; }
+.games-head { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 2px; }
+.games-head small { font-size: .7rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 600; }
+.games-head .swipe-hint { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--accent); }
+.langbar { grid-template-columns: minmax(0, 1fr); }
+.games-wrap { position: relative; min-width: 0; }
+.gscroll {
+  position: absolute; top: 0; bottom: 1px; width: 52px; border: 0; padding: 0; cursor: pointer; z-index: 2;
+  display: flex; align-items: center; color: var(--accent);
+}
+.gscroll.left { left: 0; justify-content: flex-start; background: linear-gradient(90deg, var(--box-lang) 45%, rgb(241 239 255 / 0)); }
+.gscroll.right { right: 0; justify-content: flex-end; background: linear-gradient(270deg, var(--box-lang) 45%, rgb(241 239 255 / 0)); }
+.gscroll i { width: 30px; height: 30px; border-radius: 50%; background: var(--bg); box-shadow: 0 1px 4px rgb(26 29 41 / .15); display: grid; place-items: center; }
+.gscroll svg { width: 16px; height: 16px; }
+@media (min-width: 760px) { .gscroll, .games-head .swipe-hint { display: none !important; } }
+
+/* Language bar: two dropdowns stacked on phones (game, then language), swap button beside them */
+.langbar { padding: 18px; }
+.langgrid { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px 12px; align-items: center; }
+.pick { grid-column: 1; display: grid; gap: 6px; min-width: 0; }
+.pick small { font-size: .7rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 600; }
+.langgrid .swap { grid-column: 2; grid-row: 1 / span 2; background: var(--bg); }
+.selwrap { display: block; min-width: 0; }
+.langbar select {
+  width: 100%; appearance: none; -webkit-appearance: none; cursor: pointer;
+  font: 600 1.05rem/1.25 var(--font-body); color: var(--accent);
+  background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b4bd8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center / 16px;
+  border: 1px solid rgb(59 75 216 / .2); border-radius: 12px; padding: 12px 40px 12px 14px;
+  text-overflow: ellipsis; white-space: nowrap; overflow: hidden;
+}
+.langbar select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (min-width: 760px) {
+  .langgrid { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+  #fromPick { grid-column: 1; grid-row: 1; } #toPick { grid-column: 3; grid-row: 1; }
+  .langgrid .swap { grid-column: 2; grid-row: 1; align-self: end; margin-bottom: 4px; }
+  .langgrid .swap svg { transform: rotate(90deg); }
+}
+.output[dir="rtl"] { text-align: right; }
 </style>
 </head>
 <body>
@@ -206,30 +246,12 @@ footer { color: var(--muted); font-size: .8rem; text-align: center; padding-top:
   </header>
 
   <section class="card langbar" aria-label="Languages">
-    <div class="langrow">
-      <div class="side">
-        <small id="fromLabel">Translate from</small>
-        <div id="fromSlot" class="fixed-lang">Roblox</div>
-      </div>
+    <div class="langgrid">
+      <label class="pick" id="fromPick"><small id="fromLabel">Translate from</small><span class="selwrap" id="fromSlot"><select id="gameSel" aria-label="Game"><option value="roblox">Roblox</option><option value="minecraft">Minecraft</option><option value="brawl">Brawl Stars</option><option value="fortnite">Fortnite</option><option value="cod">Call of Duty</option><option value="clash">Clash Royale</option><option value="genshin">Genshin Impact</option><option value="hsr">Star Rail</option><option value="amongus">Among Us</option><option value="any">Any game</option></select></span></label>
+      <label class="pick" id="toPick"><small id="toLabel">To</small><span class="selwrap" id="toSlot"><select id="langSel" aria-label="Language"><option value="en">Out-of-touch Adult English</option><option value="es">Español de Adulto Desfasado</option><option value="fr">Français d'Adulte Dépassé</option><option value="pt">Português de Adulto Desatualizado</option><option value="de">Deutsch für ahnungslose Erwachsene</option><option value="it">Italiano da Adulto Fuori dal Mondo</option><option value="zh">脱节大人的中文</option><option value="ja">時代遅れな大人の日本語</option><option value="ko">시대에 뒤처진 어른의 한국어</option><option value="hi">पुराने ज़माने के बड़ों की हिंदी</option><option value="ar">عربية الكبار البعيدين عن العصر</option><option value="vi">Tiếng Việt của Người Lớn Lạc Hậu</option><option value="tl">Tagalog ng Matandang Huli sa Uso</option><option value="ru">Русский для отставших от жизни взрослых</option></select></span></label>
       <button class="swap" id="swap" type="button" aria-label="Swap direction">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h14l-4-4M20 16H6l4 4"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4v14l-4-4M16 20V6l4 4"/></svg>
       </button>
-      <div class="side" style="text-align:right">
-        <small>To</small>
-        <div id="toSlot" class="fixed-lang">Out-of-touch Adult English</div>
-      </div>
-    </div>
-    <div class="games" role="group" aria-label="Which game?" id="games">
-      <button class="chip" type="button" data-game="roblox" aria-pressed="true" id="g-roblox">Roblox</button>
-      <button class="chip" type="button" data-game="minecraft" aria-pressed="false" id="g-minecraft">Minecraft</button>
-      <button class="chip" type="button" data-game="brawl" aria-pressed="false" id="g-brawl">Brawl Stars</button>
-      <button class="chip" type="button" data-game="fortnite" aria-pressed="false" id="g-fortnite">Fortnite</button>
-      <button class="chip" type="button" data-game="cod" aria-pressed="false" id="g-cod">Call of Duty</button>
-      <button class="chip" type="button" data-game="clash" aria-pressed="false" id="g-clash">Clash Royale</button>
-      <button class="chip" type="button" data-game="genshin" aria-pressed="false" id="g-genshin">Genshin Impact</button>
-      <button class="chip" type="button" data-game="hsr" aria-pressed="false" id="g-hsr">Star Rail</button>
-      <button class="chip" type="button" data-game="amongus" aria-pressed="false" id="g-amongus">Among Us</button>
-      <button class="chip" type="button" data-game="any" aria-pressed="false" id="g-any">Any game</button>
     </div>
   </section>
 
@@ -1152,7 +1174,62 @@ const OUTROS = [
 ];
 
 const $ = (id) => document.getElementById(id);
-const state = { game: "roblox", level: 1, reverse: false, ai: null };
+const state = { game: "roblox", level: 1, reverse: false, ai: null, lang: "en" };
+
+// "Out-of-touch Adult" in each language; mt is the code the translation service uses
+const LANGS = {
+  en: { name: "English", mt: "en" }, es: { name: "Spanish", mt: "es" }, fr: { name: "French", mt: "fr" },
+  pt: { name: "Portuguese", mt: "pt" }, de: { name: "German", mt: "de" }, it: { name: "Italian", mt: "it" },
+  zh: { name: "Simplified Chinese", mt: "zh-CN" }, ja: { name: "Japanese", mt: "ja" }, ko: { name: "Korean", mt: "ko" },
+  hi: { name: "Hindi", mt: "hi" }, ar: { name: "Arabic", mt: "ar" }, vi: { name: "Vietnamese", mt: "vi" },
+  tl: { name: "Tagalog", mt: "tl" }, ru: { name: "Russian", mt: "ru" }
+};
+
+// ---- other languages ----
+// The dictionary works in English; other languages go through a free translation
+// service (MyMemory), or Claude when the page runs inside Claude.
+const mtCache = new Map();
+function chunks(text, size) {
+  const out = []; let cur = "";
+  for (const piece of text.match(/[^.!?\n]+[.!?\n]*\s*/g) || [text]) {
+    if ((cur + piece).length > size && cur) { out.push(cur); cur = ""; }
+    cur += piece;
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+async function viaService(text, from, to) {
+  const parts = [];
+  for (const c of chunks(text, 450)) {
+    const res = await fetch("https://api.mymemory.translated.net/get?q=" + encodeURIComponent(c) + "&langpair=" + from + "|" + to);
+    const data = await res.json();
+    const t = data && data.responseData && data.responseData.translatedText;
+    if (Number(data.responseStatus) !== 200 || !t || /MYMEMORY WARNING/i.test(t)) throw new Error("translation unavailable");
+    parts.push(t);
+  }
+  return parts.join(" ");
+}
+async function machineTranslate(text, fromCode, toCode) {
+  const from = LANGS[fromCode].mt, to = LANGS[toCode].mt;
+  if (!text.trim() || from === to) return text;
+  const key = from + "|" + to + "|" + text;
+  if (mtCache.has(key)) return mtCache.get(key);
+  let out;
+  try { out = await viaService(text, from, to); }
+  catch (err) {
+    if (!sample) throw err;
+    const r = await sample("Translate this text from " + LANGS[fromCode].name + " into " + LANGS[toCode].name +
+      ". Keep the meaning and tone. Reply with only the translation.\n\n" + text, { modelTier: "quick" });
+    out = r.text.trim();
+  }
+  mtCache.set(key, out);
+  return out;
+}
+let mtSeq = 0, mtTimer = 0;
+function setSourceText(t) { $("sourceText").textContent = t; }
+function htmlFor(parts) {
+  return parts.map((p) => p.orig ? '<mark title="' + esc(p.orig) + '">' + esc(p.t) + "</mark>" : esc(p.t)).join("");
+}
 const input = $("input"), output = $("output");
 
 function esc(s) { return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]); }
@@ -1235,8 +1312,52 @@ function render() {
     renderGlossary(state.ai.glossary);
     return;
   }
+  const seq = ++mtSeq;
+  clearTimeout(mtTimer);
+  output.removeAttribute("dir");
+  const L = LANGS[state.lang];
+  if (state.reverse && state.lang !== "en") {
+    // their message is in another language: put it into English, then into kid-speak
+    output.textContent = "Translating from " + L.name + "...";
+    setSourceText("");
+    renderGlossary([]);
+    mtTimer = setTimeout(async () => {
+      try {
+        const english = await machineTranslate(text, state.lang, "en");
+        if (seq !== mtSeq) return;
+        const r = translateDictionary(english);
+        output.innerHTML = htmlFor(r.parts);
+        setSourceText("Translated from " + L.name + ", then into gamer talk");
+        renderGlossary(r.glossary);
+      } catch (e) {
+        if (seq !== mtSeq) return;
+        output.textContent = "Couldn't translate from " + L.name + " right now. Try again in a moment, or type it in English.";
+      }
+    }, 600);
+    return;
+  }
   const { parts, glossary } = translateDictionary(text);
-  let html = parts.map((p) => p.orig ? '<mark title="' + esc(p.orig) + '">' + esc(p.t) + "</mark>" : esc(p.t)).join("");
+  let html = htmlFor(parts);
+  if (!state.reverse && state.lang !== "en") {
+    output.innerHTML = html;
+    setSourceText("Translating into " + L.name + "...");
+    renderGlossary(glossary);
+    mtTimer = setTimeout(async () => {
+      try {
+        const plain = parts.map((p) => p.t).join("").trim();
+        const [t, ...meanings] = await Promise.all([plain, ...glossary.map((g) => g.meaning)].map((x) => machineTranslate(x, "en", state.lang)));
+        if (seq !== mtSeq) return;
+        output.textContent = t;
+        output.setAttribute("dir", state.lang === "ar" ? "rtl" : "ltr");
+        setSourceText("Translated into " + L.name);
+        renderGlossary(glossary.map((g, i) => ({ term: g.term, meaning: meanings[i] })));
+      } catch (e) {
+        if (seq !== mtSeq) return;
+        setSourceText("Couldn't translate into " + L.name + " right now, so this is in English. Try again in a moment.");
+      }
+    }, 600);
+    return;
+  }
   if (!state.reverse && state.level === 3) {
     const h = hash(text);
     html = html.trim() +
@@ -1278,19 +1399,18 @@ function renderExamples() {
 }
 
 function renderLangs() {
-  const game = GAMES[state.game];
-  $("fromSlot").textContent = state.reverse ? "Out-of-touch Adult English" : game.name;
-  $("toSlot").textContent = state.reverse ? game.name : "Out-of-touch Adult English";
+  $("gameSel").value = state.game;
+  $("langSel").value = state.lang;
+  (state.reverse ? $("fromSlot") : $("toSlot")).appendChild($("langSel"));
+  (state.reverse ? $("toSlot") : $("fromSlot")).appendChild($("gameSel"));
   $("swap").classList.toggle("flipped", state.reverse);
   $("inPanel").classList.toggle("reverse", state.reverse);
   $("inTitle").textContent = state.reverse ? "What you want to say" : "What they said";
   $("outTitle").textContent = state.reverse ? "How they'd say it" : "What they meant";
   input.placeholder = state.reverse ? "Type what you want to tell them..." : "Type or paste what they said...";
-  for (const c of document.querySelectorAll("#games .chip")) c.setAttribute("aria-pressed", String(c.dataset.game === state.game));
-  for (const b of document.querySelectorAll("#drama button")) b.setAttribute("aria-pressed", String(Number(b.dataset.level) === state.level));
 }
 
-function aiKey() { return [input.value, state.game, state.level, state.reverse].join("|"); }
+function aiKey() { return [input.value, state.game, state.level, state.reverse, state.lang].join("|"); }
 
 // ---- Claude ----
 let sample = null, ctl = null;
@@ -1301,18 +1421,18 @@ const LEVELS = {
 function promptFor(text) {
   const game = GAMES[state.game].full;
   if (state.reverse) {
-    return "Rewrite this out of touch adult's message the way a kid or teen who plays " + game +
+    return "The message may be written in " + LANGS[state.lang].name + ". Rewrite this out of touch adult's message in English the way a kid or teen who plays " + game +
       " would say it, using current gaming slang" + (state.game === "any" ? "" : " and " + game + " terms") +
       ". Keep it short, playful and family friendly, and keep the meaning.\n" +
       'Reply with only JSON: {"translation": string, "glossary": [{"term": string, "meaning": string}]}. ' +
       "The glossary lists each slang word you used with a plain meaning for the out of touch adult (at most 8).\n\nMessage:\n\"\"\"" + text + "\"\"\"";
   }
   return "You translate what kids and teens say while playing " + game +
-    " (gaming chat and internet slang) into simple, plain English an out of touch adult will understand. " +
+    " (gaming chat and internet slang) into simple, plain " + LANGS[state.lang].name + " an out of touch adult will understand. " +
     "Explain any " + (state.game === "any" ? "game" : game) + " terms in plain words inside the translation. " +
     "Tone: " + LEVELS[state.level] + ". Keep the original meaning and keep it family friendly; soften any swearing.\n" +
     'Reply with only JSON: {"translation": string, "glossary": [{"term": string, "meaning": string}]}. ' +
-    "The glossary lists each slang word or game term you decoded with a short plain meaning (at most 10).\n\nText:\n\"\"\"" + text + "\"\"\"";
+    "Write the translation and the glossary meanings in " + LANGS[state.lang].name + ". The glossary lists each slang word or game term you decoded with a short plain meaning (at most 10).\n\nText:\n\"\"\"" + text + "\"\"\"";
 }
 
 $("ask").onclick = async () => {
@@ -1362,11 +1482,18 @@ $("swap").onclick = () => {
   input.value = state.reverse ? REVERSE_EXAMPLES[0] : EXAMPLES[state.game][0];
   renderLangs(); renderExamples(); render();
 };
-for (const c of document.querySelectorAll("#games .chip")) c.onclick = () => {
-  state.game = c.dataset.game;
+$("gameSel").onchange = () => {
+  state.game = $("gameSel").value;
   try { localStorage.setItem("gt-game", state.game); } catch (e) {}
   if (!state.reverse && Object.values(EXAMPLES).flat().includes(input.value)) input.value = EXAMPLES[state.game][0];
+  state.ai = null;
   renderLangs(); renderExamples(); render();
+};
+$("langSel").onchange = () => {
+  state.lang = $("langSel").value;
+  try { localStorage.setItem("gt-lang", state.lang); } catch (e) {}
+  state.ai = null;
+  renderLangs(); render();
 };
 for (const b of document.querySelectorAll("#drama button")) b.onclick = () => {
   state.level = Number(b.dataset.level);
@@ -1391,6 +1518,7 @@ function toast(msg) {
 
 try {
   const g = localStorage.getItem("gt-game"); if (g && GAMES[g]) state.game = g;
+  const lg = localStorage.getItem("gt-lang"); if (lg && LANGS[lg]) state.lang = lg;
 } catch (e) {}
 input.value = EXAMPLES[state.game][0];
 renderLangs(); renderExamples(); render();
