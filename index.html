@@ -1,0 +1,1523 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Translate what kids say while gaming into Out-of-touch Adult English.">
+<title>Gamer Translator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+[hidden] { display: none !important; }
+html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+/* Layout: one calm white column (two panels side by side from 760px): game tabs, input panel, output panel, decoded-words list */
+:root {
+  color-scheme: light;
+  --bg: #ffffff;
+  --soft: #f6f7fa;
+  --ink: #1a1d29;
+  --muted: #6b7083;
+  --line: #e6e8ef;
+  --accent: #3b4bd8;
+  --accent-ink: #ffffff;
+  --accent-soft: #eef0ff;
+  --mark: #fdf1c7;
+  --mark-ink: #3a2e00;
+  --ok: #1f8a5b;
+  --font-display: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --font-body: "Figtree", "Segoe UI", system-ui, sans-serif;
+  --font-chat: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--bg); }
+body {
+  color: var(--ink);
+  font: 16px/1.55 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 22px 48px;
+}
+.wrap { max-width: 1040px; margin: 0 auto; display: grid; gap: 20px; }
+
+header { display: flex; align-items: center; gap: 12px; padding-bottom: 4px; }
+.logo {
+  width: 40px; height: 40px; flex: none; border-radius: 50%;
+  background: var(--accent-soft); color: var(--accent);
+  display: grid; place-items: center;
+}
+.logo svg { width: 24px; height: 24px; }
+h1 { font: 400 2.1rem/1 var(--font-display); margin: 0; letter-spacing: -0.01em; }
+.tag { margin: 4px 0 0; color: var(--muted); font-size: .92rem; }
+
+.card { background: var(--bg); border: 1px solid var(--line); border-radius: 16px; }
+
+/* language bar */
+.langbar { display: grid; gap: 0; border: 0; }
+.langrow { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; padding: 4px 0 12px; }
+.side { min-width: 0; }
+.side small { display: block; font-size: .7rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 2px; font-weight: 600; }
+.fixed-lang { font: 600 1.08rem/1.25 var(--font-body); color: var(--accent); overflow-wrap: anywhere; }
+.swap {
+  width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--line);
+  background: var(--bg); color: var(--muted); display: grid; place-items: center; cursor: pointer;
+  transition: transform .3s ease, color .2s;
+}
+.swap:hover { color: var(--accent); }
+.swap svg { width: 20px; height: 20px; }
+.swap.flipped { transform: rotate(180deg); }
+.games {
+  display: flex; gap: 2px; overflow-x: auto; border-bottom: 1px solid var(--line);
+  scrollbar-width: none; margin: 0 calc(-1 * max(16px, env(safe-area-inset-left, 0px))) 0;
+  padding: 0 max(16px, env(safe-area-inset-left, 0px));
+}
+.games::-webkit-scrollbar { display: none; }
+@media (min-width: 760px) { .games { flex-wrap: wrap; margin: 0; padding: 0; } }
+.chip {
+  flex: none; font: 500 .94rem/1 var(--font-body); padding: 12px 12px 11px; border: 0;
+  border-bottom: 2px solid transparent; background: transparent; color: var(--muted); cursor: pointer; white-space: nowrap;
+}
+.chip:hover { color: var(--ink); }
+.chip[aria-pressed="true"] { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+/* panels */
+.panels { display: grid; gap: 16px; }
+@media (min-width: 760px) { .panels { grid-template-columns: 1fr 1fr; align-items: start; } }
+.panel { padding: 16px; display: grid; gap: 14px; min-width: 0; }
+.panel.out { background: var(--soft); border-color: transparent; }
+.panel-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.panel-head h2 { margin: 0; font: 600 .72rem/1 var(--font-body); text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+
+.chatbox { padding: 0; }
+.chatbox .who { font: 500 .78rem/1 var(--font-chat); color: var(--muted); margin-bottom: 8px; }
+.chatbox .who b { color: var(--accent); font-weight: 600; }
+textarea {
+  width: 100%; min-height: 130px; resize: vertical; border: 0; outline: none;
+  background: transparent; color: var(--ink); font: 400 1.3rem/1.45 var(--font-body);
+}
+textarea::placeholder { color: #a3a7b6; }
+.meta { display: flex; justify-content: space-between; align-items: center; font-size: .8rem; color: var(--muted); padding-top: 8px; border-top: 1px solid var(--line); }
+
+.ghost {
+  font: 500 .86rem/1 var(--font-body); border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+  padding: 8px 12px; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+}
+.ghost:hover { border-color: #cfd3df; }
+.ghost svg { width: 15px; height: 15px; }
+
+.tools { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.ghost.live { background: #d93f3f; border-color: #d93f3f; color: #fff; }
+.ghost:disabled { opacity: .5; cursor: progress; }
+.audio-status { display: flex; align-items: center; gap: 10px; font-size: .9rem; background: var(--accent-soft); border-radius: 12px; padding: 10px 14px; }
+.audio-status #audioText { flex: 1; min-width: 0; }
+.spin { width: 16px; height: 16px; flex: none; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation-duration: 3s; } }
+.examples { display: grid; gap: 8px; }
+.examples small, .drama small { font-size: .72rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .1em; }
+.ex-list { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.ex {
+  flex: none; max-width: 250px; text-align: left; font: 400 .86rem/1.35 var(--font-body);
+  border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 999px; padding: 8px 14px; cursor: pointer;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ex:hover { border-color: var(--accent); color: var(--accent); }
+
+.drama { display: grid; gap: 8px; }
+.seg { display: grid; grid-template-columns: repeat(2, 1fr); background: var(--soft); border-radius: 999px; padding: 4px; }
+.seg button {
+  font: 500 .86rem/1.15 var(--font-body); border: 0; background: transparent; color: var(--muted);
+  padding: 9px 4px; border-radius: 999px; cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--bg); color: var(--ink); font-weight: 600; box-shadow: 0 1px 3px rgb(26 29 41 / .1); }
+
+.output {
+  font: 400 1.3rem/1.55 var(--font-body); min-height: 130px; white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.output.placeholder { color: #a3a7b6; }
+.output.reverse-out { font-family: var(--font-chat); font-size: 1.05rem; }
+mark { background: var(--mark); color: var(--mark-ink); border-radius: 4px; padding: 0 3px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.narration { display: block; font: italic 400 1.35rem/1.4 var(--font-display); color: var(--muted); margin: 2px 0 6px; }
+.narration:last-child { margin: 8px 0 0; }
+
+.source { font-size: .8rem; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.source .dot { width: 7px; height: 7px; border-radius: 50%; background: #b5b9c7; flex: none; }
+.source.ai .dot { background: var(--ok); }
+
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.primary {
+  font: 600 .95rem/1 var(--font-body); background: var(--accent); color: var(--accent-ink); border: 0;
+  padding: 12px 18px; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+}
+.primary svg { width: 17px; height: 17px; }
+.primary:disabled { opacity: .6; cursor: progress; }
+button:focus-visible, .chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.glossary { padding: 20px 16px; display: grid; gap: 10px; }
+.glossary h2 { margin: 0; font: 400 1.6rem/1.1 var(--font-display); }
+.glossary p.hint { margin: 0; color: var(--muted); font-size: .9rem; }
+.gl-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.gl-list li { display: grid; grid-template-columns: minmax(84px, 34%) 1fr; gap: 14px; padding: 12px 0; border-top: 1px solid var(--line); }
+.gl-list li:first-child { border-top: 0; }
+.gl-term { font: 500 .92rem/1.4 var(--font-chat); color: var(--accent); overflow-wrap: anywhere; }
+.gl-mean { font-size: .98rem; min-width: 0; }
+
+footer { color: var(--muted); font-size: .8rem; text-align: center; padding-top: 4px; }
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-weight: 600; font-size: .9rem; max-width: calc(100vw - 32px); text-align: center; }
+
+@media (prefers-reduced-motion: reduce) { .swap { transition: none; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 10h14a6 6 0 0 1 6 6v3a4 4 0 0 1-7 2.6L20 19h-8l-2 2.6A4 4 0 0 1 3 19v-3a6 6 0 0 1 6-6z"/>
+        <path d="M9 14v4M7 16h4"/><circle cx="21" cy="15" r=".6" fill="currentColor"/><circle cx="24" cy="17.5" r=".6" fill="currentColor"/>
+      </svg>
+    </div>
+    <div>
+      <h1>Gamer Translator</h1>
+      <p class="tag">What your kid just yelled at the screen, in plain English.</p>
+    </div>
+  </header>
+
+  <section class="card langbar" aria-label="Languages">
+    <div class="langrow">
+      <div class="side">
+        <small id="fromLabel">Translate from</small>
+        <div id="fromSlot" class="fixed-lang">Roblox</div>
+      </div>
+      <button class="swap" id="swap" type="button" aria-label="Swap direction">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h14l-4-4M20 16H6l4 4"/></svg>
+      </button>
+      <div class="side" style="text-align:right">
+        <small>To</small>
+        <div id="toSlot" class="fixed-lang">Out-of-touch Adult English</div>
+      </div>
+    </div>
+    <div class="games" role="group" aria-label="Which game?" id="games">
+      <button class="chip" type="button" data-game="roblox" aria-pressed="true" id="g-roblox">Roblox</button>
+      <button class="chip" type="button" data-game="minecraft" aria-pressed="false" id="g-minecraft">Minecraft</button>
+      <button class="chip" type="button" data-game="brawl" aria-pressed="false" id="g-brawl">Brawl Stars</button>
+      <button class="chip" type="button" data-game="fortnite" aria-pressed="false" id="g-fortnite">Fortnite</button>
+      <button class="chip" type="button" data-game="cod" aria-pressed="false" id="g-cod">Call of Duty</button>
+      <button class="chip" type="button" data-game="clash" aria-pressed="false" id="g-clash">Clash Royale</button>
+      <button class="chip" type="button" data-game="genshin" aria-pressed="false" id="g-genshin">Genshin Impact</button>
+      <button class="chip" type="button" data-game="hsr" aria-pressed="false" id="g-hsr">Star Rail</button>
+      <button class="chip" type="button" data-game="amongus" aria-pressed="false" id="g-amongus">Among Us</button>
+      <button class="chip" type="button" data-game="any" aria-pressed="false" id="g-any">Any game</button>
+    </div>
+  </section>
+
+  <div class="panels">
+    <section class="card panel" id="inPanel">
+      <div class="panel-head"><h2 id="inTitle">What they said</h2></div>
+      <div class="chatbox">
+        <textarea id="input" spellcheck="false" aria-label="Text to translate" placeholder="Type or paste what they said..."></textarea>
+        <div class="meta">
+          <span id="count">0 / 3000</span>
+          <span class="tools">
+          <button class="ghost" type="button" id="rec">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span id="recLabel">Record</span>
+          </button>
+          <button class="ghost" type="button" id="upload">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg>Upload
+          </button>
+          <button class="ghost" type="button" id="clear" aria-label="Clear">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+          <input type="file" id="file" accept="audio/*,video/*" hidden>
+          </span>
+        </div>
+      </div>
+      <div class="audio-status" id="audioStatus" role="status" hidden>
+        <span class="spin" id="audioSpin" hidden></span>
+        <span id="audioText"></span>
+        <button class="ghost" type="button" id="audioStop" hidden>Stop</button>
+      </div>
+      <div class="examples">
+        <small>Try one they might say</small>
+        <div class="ex-list" id="examples"></div>
+      </div>
+      <div class="drama">
+        <small>How dramatic?</small>
+        <div class="seg" role="group" aria-label="Drama level" id="drama">
+          <button type="button" data-level="1" aria-pressed="false" id="d1">Just the facts</button>
+          <button type="button" data-level="3" aria-pressed="true" id="d3">Over the top</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card panel out" aria-live="polite">
+      <div class="panel-head">
+        <h2 id="outTitle">What they meant</h2>
+        <button class="ghost" type="button" id="copy">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copy
+        </button>
+      </div>
+      <div class="output" id="output"></div>
+      <div class="source" id="source"><span class="dot"></span><span id="sourceText">Instant translation from the built-in dictionary</span></div>
+      <div class="actions">
+        <button class="primary" type="button" id="ask" hidden>
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 5.6L19.5 9l-5.7 1.6L12 16l-1.8-5.4L4.5 9l5.7-1.4zM19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9zM5 15l.7 1.8 1.8.7-1.8.7L5 20l-.7-1.8-1.8-.7 1.8-.7z"/></svg>
+          <span id="askText">Translate with Claude</span>
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <section class="card glossary" id="glossary">
+    <h2>Words we decoded</h2>
+    <p class="hint" id="glHint">Each highlighted word in the translation, explained.</p>
+    <ul class="gl-list" id="glList"></ul>
+  </section>
+
+  <footer>Kids invent new words every week. Recordings are turned into text right on your device.</footer>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+// [term, plain meaning, dramatic meaning]
+const GENERAL = [
+  ["gg ez", "good game, that was easy (a rude brag)", "good game, that was SO easy (a deeply rude victory dance)"],
+  ["ggs", "good games", "good games, handshakes all around"],
+  ["gg", "good game", "good game (a polite digital handshake)"],
+  ["glhf", "good luck, have fun", "good luck and have fun, may the best player win"],
+  ["wp", "well played", "magnificently played"],
+  ["nt", "nice try", "a valiant effort, truly"],
+  ["ez", "easy", "embarrassingly easy"],
+  ["no cap", "I'm not lying", "I swear on my entire allowance"],
+  ["capping", "lying", "telling tall tales"],
+  ["cap", "a lie", "a big fat lie"],
+  ["frfr", "for real, really", "for real, really, truly, from the bottom of my heart"],
+  ["fr", "for real", "for real, I mean it"],
+  ["on god", "I swear", "I solemnly swear"],
+  ["ong", "I swear", "I solemnly swear"],
+  ["deadass", "seriously", "with total seriousness"],
+  ["we're cooked", "we are losing badly", "we are DOOMED"],
+  ["cooked", "completely beaten", "roasted like a Thanksgiving turkey"],
+  ["cracked", "incredibly skilled", "terrifyingly talented, like an Olympic athlete"],
+  ["goated", "the best ever", "worthy of a statue in the town square"],
+  ["mid", "just average", "as exciting as plain toast"],
+  ["bussin", "really good", "so good it should be illegal"],
+  ["sus", "suspicious", "as suspicious as a cookie jar with crumbs next to it"],
+  ["noobs", "beginners", "tiny babies who just discovered buttons"],
+  ["noob", "beginner", "a tiny baby who just discovered buttons"],
+  ["n00b", "beginner", "a tiny baby who just discovered buttons"],
+  ["bots", "bad players", "players so bad they might be toasters"],
+  ["bot", "bad player", "a player so bad they might be a toaster"],
+  ["afk", "away from the keyboard", "physically gone, abandoning their post"],
+  ["brb", "be right back", "be right back (estimated return: unknown)"],
+  ["lagging", "freezing because of slow internet", "frozen in time like a museum statue"],
+  ["laggy", "slow and freezing", "slower than a snail stuck in syrup"],
+  ["lag", "slow internet", "internet slower than a carrier pigeon"],
+  ["ping", "connection speed", "the speed of the household internet"],
+  ["op", "way too strong", "unfairly strong, like bringing a bazooka to a pillow fight"],
+  ["nerfed", "made weaker by the game makers", "brutally weakened by the game gods"],
+  ["nerf", "make weaker", "cruelly weaken"],
+  ["buffed", "made stronger", "blessed with extra power"],
+  ["meta", "the most popular strategy right now", "the strategy every single person copies"],
+  ["got carried", "won only because a teammate did all the work", "was carried to victory like royalty on a throne"],
+  ["carried", "did all the work for the team", "single-handedly saved the entire team"],
+  ["carrying", "doing all the work for the team", "single-handedly holding the whole team on their back"],
+  ["clutch", "won at the very last second", "saved the day at the last second like an action movie hero"],
+  ["throwing", "making silly mistakes that lose the game", "sabotaging the team with astonishing mistakes"],
+  ["threw", "lost a game we should have won", "snatched defeat from the jaws of victory"],
+  ["griefing", "ruining the game for others on purpose", "being a professional troublemaker"],
+  ["griefer", "someone who ruins the game on purpose", "a professional troublemaker"],
+  ["toxic", "mean and rude", "meaner than a cat at bath time"],
+  ["tilted", "so upset it's making me play worse", "emotionally spiraling like a dropped ice cream cone"],
+  ["rage quit", "quit the game angrily", "stormed off in a fit of fury"],
+  ["salty", "bitter and annoyed", "saltier than a bag of pretzels"],
+  ["camping", "hiding in one spot to ambush people", "lurking in a corner like a sneaky gargoyle"],
+  ["camper", "someone who hides and ambushes", "a sneaky corner gargoyle"],
+  ["one tapped", "knocked out with a single hit", "defeated by one single, humiliating hit"],
+  ["pog", "amazing!", "AMAZING, cue the fireworks"],
+  ["poggers", "amazing!", "AMAZING, cue the fireworks"],
+  ["take the l", "accept the loss", "accept defeat with whatever dignity remains"],
+  ["huge w", "a big win", "a gigantic, glorious victory"],
+  ["w", "a win", "a glorious victory"],
+  ["l", "a loss", "a humiliating defeat"],
+  ["lowkey", "kind of", "secretly, between you and me"],
+  ["highkey", "very openly", "loudly, for the whole world to hear"],
+  ["slaying", "doing amazing", "absolutely dominating"],
+  ["based", "bold and true to themselves", "bravely unbothered by what anyone thinks"],
+  ["npc", "someone acting like a boring background character", "someone with the personality of a cardboard cutout"],
+  ["touch grass", "go outside and take a break from screens", "go outside and remember what the sun looks like"],
+  ["rizz", "charm", "the smooth charisma of a movie star"],
+  ["skibidi", "a silly meme word that means nothing", "pure internet nonsense, do not try to understand it"],
+  ["bet", "okay, deal", "it is a deal, let us shake on it"],
+  ["say less", "got it, no need to explain", "I understand completely, speak no more"],
+  ["bruh", "oh come on", "oh come ON, the disappointment is immeasurable"],
+  ["bro", "my friend", "my dear comrade"],
+  ["fam", "my friends", "my beloved family of friends"],
+  ["squad", "my group of friends", "my loyal band of warriors"],
+  ["loot", "free items picked up in the game", "glittering treasure"],
+  ["grinding", "playing the same thing over and over to earn rewards", "toiling like a medieval farmer for digital gold"],
+  ["grind", "play the same thing over and over to earn rewards", "toil like a medieval farmer for digital gold"],
+  ["farming", "collecting the same thing over and over", "harvesting like a dedicated digital farmer"],
+  ["xp", "experience points (progress)", "precious progress points"],
+  ["leveled up", "got stronger and unlocked new things", "ascended to a higher form"],
+  ["hp", "health", "life force"],
+  ["dps", "how hard you hit", "raw destructive power"],
+  ["mmr", "skill rating", "official skill ranking"],
+  ["ranked", "the serious competitive mode", "the serious, high-stakes competitive mode"],
+  ["sweaty", "trying way too hard", "playing like the fate of the world depends on it"],
+  ["sweats", "people trying way too hard", "people playing like the fate of the world depends on it"],
+  ["tryhard", "someone trying way too hard", "someone playing like the fate of the world depends on it"],
+  ["smurfing", "a skilled player using a new account to beat beginners", "a pro disguised as a beginner, hunting newcomers"],
+  ["smurf", "a skilled player on a new account", "a pro in a beginner disguise"],
+  ["hacker", "a cheater using illegal software", "a dastardly digital villain"],
+  ["hacking", "cheating with illegal software", "committing dastardly digital crimes"],
+  ["aimbot", "cheat software that aims for you", "a robot that aims for cheaters"],
+  ["p2w", "pay to win (you need real money to compete)", "a game that demands YOUR money to win"],
+  ["pay to win", "you need real money to compete", "a game that demands YOUR money to win"],
+  ["skins", "outfits for your character (often cost real money)", "fancy digital outfits that cost real money"],
+  ["skin", "an outfit for your character", "a fancy digital outfit that costs real money"],
+  ["emote", "a little dance or gesture in the game", "a little victory dance"],
+  ["lobby", "the waiting room before a game", "the waiting room before battle"],
+  ["queue", "waiting in line for a match", "waiting in line for battle"],
+  ["glitched", "broke in a weird way", "was cursed by a computer error"],
+  ["bugged", "broken", "cursed by a computer error"],
+  ["rekt", "badly beaten", "obliterated"],
+  ["diff", "the other side was just better", "a tragic difference in skill"],
+  ["1v1", "a one-on-one duel", "a one-on-one duel at high noon"],
+  ["omw", "on my way", "on my way, fast as lightning"],
+  ["idk", "I don't know", "I have absolutely no idea"],
+  ["imo", "in my opinion", "in my humble opinion"],
+  ["tbh", "to be honest", "to be painfully honest"],
+  ["ngl", "not gonna lie", "I must confess"],
+  ["smh", "shaking my head (disappointed)", "shaking my head in deep disappointment"],
+  ["lmao", "that's really funny", "I am laughing so hard"],
+  ["lol", "that's funny", "ha ha"],
+  ["irl", "in real life", "in the real, physical world"],
+  ["sheesh", "wow, impressive", "WOW, how impressive"],
+  ["oof", "ouch, that's unfortunate", "ouch, a painful tragedy"],
+  ["f in the chat", "let's all feel sad about this", "let us all have a moment of silence"],
+  ["locked in", "fully focused", "focused like a surgeon"],
+  ["aura", "coolness points", "invisible coolness points"],
+  ["delulu", "delusional", "living in a fantasy world"],
+  ["opps", "the rivals", "the sworn enemies"],
+  ["crashing out", "losing their temper", "having a full theatrical meltdown"],
+  ["cringe", "embarrassing", "so embarrassing it hurts"],
+  ["glazing", "complimenting someone way too much", "showering someone in compliments like a fan club"],
+  ["one more game", "one more game (this is never true)", "one more game (historians agree this is never true)"],
+  ["five more minutes", "at least another hour", "at least another hour, probably two"]
+];
+
+const BRAWL = [
+  ["brawlers", "the characters you can play", "the heroes in this cartoon battle arena"],
+  ["brawler", "the character you play", "the chosen hero"],
+  ["trophy pushing", "trying to win lots of games to climb the ranks", "a heroic quest to climb the trophy mountain"],
+  ["pushing", "trying to win lots of games to climb the ranks", "climbing the trophy mountain"],
+  ["trophies", "points you win or lose each game", "precious ranking points"],
+  ["trophy road", "the reward path you climb by winning", "the long road of rewards"],
+  ["gems", "the premium money (bought with real money)", "glittering gems purchased with YOUR money"],
+  ["star power", "a special upgrade for one character", "a magical upgrade"],
+  ["gadget", "a special ability you can use a few times", "a secret trick up their sleeve"],
+  ["hypercharge", "a powered-up version of the big attack", "a full-on super-saiyan power surge"],
+  ["hypercharged", "powered up to the max", "glowing with ultimate power"],
+  ["super", "the big special attack", "the big dramatic special move"],
+  ["ult", "the big special attack", "the big dramatic special move"],
+  ["gears", "small bonus upgrades", "tiny bonus upgrades"],
+  ["power points", "upgrade points for characters", "upgrade points"],
+  ["starr drop", "a random prize box", "a mystery prize falling from the sky"],
+  ["starr drops", "random prize boxes", "mystery prizes falling from the sky"],
+  ["brawl pass", "a season reward pass (bought with real money)", "a VIP reward pass that wants your credit card"],
+  ["bling", "money for buying outfits", "shiny outfit money"],
+  ["solo showdown", "a mode where everyone fights alone until one is left", "a ten-person free-for-all, last one standing wins"],
+  ["duo showdown", "a mode where pairs fight until one pair is left", "a team-of-two survival battle"],
+  ["showdown", "a last-one-standing battle mode", "a last-one-standing battle royale"],
+  ["gem grab", "a mode where teams race to collect 10 gems", "a frantic race to collect 10 gems"],
+  ["brawl ball", "soccer, but with fighting", "soccer, but everyone is allowed to punch"],
+  ["heist", "a mode where you attack the other team's safe", "a bank robbery mode"],
+  ["bounty", "a mode where you score by knocking out opponents", "a wanted-poster hunting mode"],
+  ["knockout", "a mode where your team must knock out the whole enemy team", "a best-of-three elimination showdown"],
+  ["hot zone", "a mode where you hold a spot on the map", "a fight to hold the hot zone"],
+  ["power league", "the serious competitive ranked mode", "the high-stakes championship mode"],
+  ["teaming", "secretly working together in a solo mode (against the rules)", "forming a forbidden secret alliance"],
+  ["teamer", "a player secretly teaming up in a solo mode", "a member of a forbidden secret alliance"],
+  ["teamers", "players secretly teaming up in a solo mode", "members of a forbidden secret alliance"],
+  ["bush camping", "hiding in the tall grass to ambush people", "lurking in the bushes like a sneaky gargoyle"],
+  ["bush campers", "players who hide in the grass to ambush", "sneaky gargoyles lurking in the shrubbery"],
+  ["bushes", "the tall grass where players hide", "the sneaky ambush shrubs"],
+  ["bush", "tall grass where players hide", "a sneaky ambush shrub"],
+  ["cubes", "power boxes that make you stronger", "power boxes that grant great strength"],
+  ["mortis main", "someone who always plays the dashing vampire character", "a devoted follower of the dashing vampire"],
+  ["main", "my favorite character I always play", "my faithful signature hero"],
+  ["mastery", "points for playing one character a lot", "loyalty points for one hero"],
+  ["club league", "a weekly team competition with their club", "the weekly club tournament"],
+  ["club", "their team group in the game", "their gaming guild"],
+  ["brawl talk", "the video where new updates are announced", "the sacred announcement video"],
+  ["mythic", "a rare character", "an extremely rare hero"],
+  ["legendary", "a super rare character", "a legendary, near-mythical hero"],
+  ["rank 30", "a very high trophy level on one character", "an elite level of mastery"],
+  ["rank 35", "a very high trophy level on one character", "an elite level of mastery"],
+  ["prestige", "a top-tier level for a character", "elite top-tier status"],
+  ["supercell", "the company that makes the game", "the mighty company behind the game"],
+  ["wall break", "blowing up the walls of the map", "demolishing the walls of the arena"]
+];
+
+const MINECRAFT = [
+  ["creepers", "green monsters that sneak up and explode", "silent green exploding menaces"],
+  ["creeper", "a green monster that sneaks up and explodes", "a silent green exploding menace"],
+  ["aw man", "(a line from a famous Minecraft song)", "(a line from a famous Minecraft song)"],
+  ["mobs", "creatures and monsters", "creatures and monsters of the realm"],
+  ["mob farm", "a trap built to collect monster drops automatically", "an ingenious monster-catching factory"],
+  ["mob", "a creature or monster", "a creature of the realm"],
+  ["spawner", "a cage that keeps creating monsters", "a cursed cage that keeps creating monsters"],
+  ["endermen", "tall black teleporting monsters", "tall shadowy teleporting creatures"],
+  ["enderman", "a tall black teleporting monster", "a tall shadowy teleporting creature"],
+  ["ender dragon", "the final boss dragon", "the great final dragon"],
+  ["ender pearl", "a throwable item that teleports you", "a magic teleporting orb"],
+  ["pearl", "throw a teleporting orb", "throw a magic teleporting orb"],
+  ["nether portal", "a doorway to the fire dimension", "a gateway to the fiery underworld"],
+  ["nether", "the fire and lava world", "the fiery underworld"],
+  ["the end", "the final world where the dragon lives", "the final dark realm of the dragon"],
+  ["stronghold", "an underground castle with the portal to the final world", "an ancient underground fortress"],
+  ["diamonds", "the most valuable gems in the game", "the most precious treasure in the land"],
+  ["diamond", "the most valuable gem", "precious treasure"],
+  ["netherite", "the very best and toughest material", "the strongest metal known to the realm"],
+  ["redstone", "the game's version of electrical wiring", "the magical electrical wiring"],
+  ["survival", "the mode where you gather everything and can die", "the mode where every day is a struggle to stay alive"],
+  ["creative", "the building mode with unlimited blocks", "the mode of infinite building power"],
+  ["hardcore", "survival mode where you only get one life", "a mode with one life only, no second chances"],
+  ["smp", "a shared world where friends survive together", "a shared kingdom with friends"],
+  ["realm", "a private online world for friends (a paid subscription)", "a private kingdom for friends"],
+  ["server", "an online world they play on with others", "an online kingdom"],
+  ["hypixel", "a huge public Minecraft server with mini-games", "the giant online arcade of Minecraft"],
+  ["bedwars", "a team game where you protect your bed and destroy others'", "an epic war to protect your sacred bed"],
+  ["skywars", "a battle on floating islands", "a battle on floating sky islands"],
+  ["bridging", "building a path of blocks across a gap", "building a bridge over a deadly gap"],
+  ["water bucket clutch", "landing in water you placed at the last second to survive a fall", "a death-defying last-second water landing"],
+  ["mlg", "a flashy last-second trick", "a jaw-dropping last-second trick"],
+  ["the void", "the empty space below the world where you fall forever", "the endless bottomless abyss"],
+  ["void", "the empty space below the world", "the bottomless abyss"],
+  ["spawn", "the starting point", "the sacred starting point"],
+  ["respawn", "come back to life", "rise again from the dead"],
+  ["elytra", "wings that let you glide", "magnificent gliding wings"],
+  ["totem", "an item that saves you from dying once", "a magic charm that cheats death"],
+  ["enchanted", "magically upgraded", "imbued with magic"],
+  ["enchant", "magically upgrade", "imbue with magic"],
+  ["mending", "a magic upgrade that repairs your tools", "the magical self-repair enchantment"],
+  ["villagers", "the shopkeeper characters", "the humble townsfolk"],
+  ["villager", "a shopkeeper character", "a humble townsperson"],
+  ["pillagers", "raiding bandits", "dastardly raiding bandits"],
+  ["raid", "an attack on a village by bandits", "a siege on the village"],
+  ["warden", "a blind and very dangerous underground monster", "a terrifying blind beast of the deep"],
+  ["ancient city", "a dangerous underground ruin", "a haunted underground ruin"],
+  ["strip mining", "digging long tunnels to find ore", "tunneling endlessly for treasure"],
+  ["caving", "exploring caves for resources", "spelunking for treasure"],
+  ["tnt", "explosive blocks", "explosive blocks of chaos"],
+  ["iron farm", "a machine that produces iron automatically", "an automatic iron factory"],
+  ["xp farm", "a machine for collecting experience points", "an experience point factory"],
+  ["seed", "the code that generates a world", "the secret code of a world"],
+  ["chunk", "a square section of the world", "a square piece of the world"],
+  ["biome", "a type of landscape like desert or forest", "a type of landscape"],
+  ["x-ray", "cheating to see through walls", "forbidden see-through-walls cheating"],
+  ["hacked client", "a cheating version of the game", "a cheater's secret version of the game"],
+  ["mods", "fan-made add-ons that change the game", "fan-made magical add-ons"],
+  ["modpack", "a big bundle of fan-made add-ons", "a treasure chest of fan add-ons"],
+  ["shaders", "add-ons that make the game look prettier", "add-ons that make the game gorgeous"],
+  ["texture pack", "a pack that changes how blocks look", "a makeover for the whole world"],
+  ["herobrine", "a made-up ghost from a famous rumor", "a legendary ghost story"],
+  ["steve", "the default character", "the classic hero, Steve"],
+  ["bedrock", "the unbreakable bottom layer (or the console/phone version)", "the unbreakable bottom of the world"],
+  ["lava", "lava (deadly)", "molten doom"],
+  ["phantoms", "flying monsters that show up if you don't sleep", "night terrors that punish you for not sleeping"],
+  ["full netherite", "wearing the strongest armor in the game", "clad head to toe in the finest armor in the land"],
+  ["op", "a server admin with special powers", "an all-powerful server ruler"]
+];
+
+const ROBLOX = [
+  ["robux", "Roblox money (bought with real money)", "digital coins purchased with YOUR money"],
+  ["obbies", "obstacle course games", "perilous obstacle courses"],
+  ["obby", "an obstacle course game", "a perilous obstacle course of doom"],
+  ["tycoon", "a game where you build up a business", "a get-rich-quick empire game"],
+  ["simulator", "a game where you collect stuff and upgrade over and over", "an endless clicking-and-collecting adventure"],
+  ["bacon hair", "a player with the free starter hairstyle (seen as a beginner)", "a humble beginner with the free starter haircut"],
+  ["bacon", "a player with the free starter look (seen as a beginner)", "a humble beginner with the free starter haircut"],
+  ["oof", "the classic Roblox 'I died' sound", "the legendary Roblox death cry"],
+  ["blox fruits", "a popular pirate adventure game on Roblox", "a swashbuckling pirate adventure"],
+  ["adopt me", "a popular pet-raising game on Roblox", "the great pet-raising game"],
+  ["brookhaven", "a popular pretend-play town game on Roblox", "a pretend town full of drama"],
+  ["bloxburg", "a life-simulation house-building game on Roblox", "a dream-house building game"],
+  ["mm2", "Murder Mystery 2, a whodunit hide-and-seek game", "a whodunit game of suspense"],
+  ["dti", "Dress to Impress, a fashion contest game", "a high-stakes runway fashion show"],
+  ["dress to impress", "a fashion contest game on Roblox", "a high-stakes runway fashion show"],
+  ["grow a garden", "a popular gardening game on Roblox", "a fiercely competitive vegetable patch"],
+  ["pls donate", "a game where players ask strangers for Robux", "a game of politely begging for coins"],
+  ["doors", "a popular spooky horror game on Roblox", "a terrifying haunted-hotel game"],
+  ["limiteds", "rare items that can be resold for Robux", "rare treasures that trade like stocks"],
+  ["limited", "a rare item that can be resold", "a rare treasure"],
+  ["ugc", "items made by other players", "player-made fashion items"],
+  ["game pass", "a paid upgrade inside one game", "a paid VIP perk"],
+  ["gamepass", "a paid upgrade inside one game", "a paid VIP perk"],
+  ["premium", "Roblox's paid monthly membership", "the fancy paid membership"],
+  ["admin abuse", "a game admin using their powers to mess with everyone", "an all-powerful ruler causing mayhem"],
+  ["admin", "a player with special powers in that game", "a player with godlike powers"],
+  ["devs", "the people who made the game", "the game's creators"],
+  ["dev", "the person who made the game", "the game's creator"],
+  ["fit", "outfit", "fashion ensemble"],
+  ["avatar", "their character", "their digital self"],
+  ["scammed", "tricked into a bad trade", "cruelly swindled"],
+  ["trading", "swapping items with other players", "wheeling and dealing"],
+  ["studio", "the tool for making Roblox games", "the game-making workshop"]
+];
+
+const FORTNITE = [
+  ["v-bucks", "Fortnite money (bought with real money)", "digital coins purchased with YOUR money"],
+  ["vbucks", "Fortnite money (bought with real money)", "digital coins purchased with YOUR money"],
+  ["item shop", "the store that sells outfits for V-Bucks", "the very tempting outfit store"],
+  ["battle pass", "a season reward pass (bought with real money)", "a VIP reward pass that wants your credit card"],
+  ["victory royale", "won the whole match, last one standing", "WON THE ENTIRE MATCH against 99 other players"],
+  ["dub", "a win", "a glorious victory"],
+  ["battle bus", "the flying bus that drops everyone onto the island", "the flying school bus of destiny"],
+  ["where we dropping", "where should we land on the map?", "where shall we parachute into battle?"],
+  ["hot drop", "landing where lots of other players land", "parachuting straight into chaos"],
+  ["dropping", "landing from the battle bus", "parachuting into battle"],
+  ["the storm", "the shrinking danger zone", "the deadly shrinking purple storm"],
+  ["storm", "the shrinking danger zone", "the deadly purple storm"],
+  ["cranking 90s", "building ramps in a fast spiral", "building a tower at superhuman speed"],
+  ["cranking", "building really fast", "building at superhuman speed"],
+  ["box fight", "a fight inside small built walls", "a duel inside a tiny wooden fortress"],
+  ["boxed", "trapped inside walls", "trapped in a tiny wooden fortress"],
+  ["editing", "quickly changing a built wall to shoot through it", "reshaping walls at lightning speed"],
+  ["zero build", "the mode without building", "the no-building mode"],
+  ["mats", "building materials", "precious building supplies"],
+  ["big pot", "a large shield potion", "a big jug of protective potion"],
+  ["minis", "small shield potions", "tiny protective potions"],
+  ["chug jug", "a drink that fully heals you", "a magical full-health milkshake"],
+  ["shield", "extra armor health", "a protective force field"],
+  ["third partied", "attacked by another team mid-fight", "ambushed by a third army mid-battle"],
+  ["third party", "a team that joins a fight already happening", "a third army crashing the battle"],
+  ["knocked", "downed and waiting to be revived", "wounded on the ground, crying for help"],
+  ["reboot", "bring a teammate back into the game", "resurrect a fallen comrade"],
+  ["rez", "revive a teammate", "bring a fallen comrade back to life"],
+  ["default skin", "a player with the free starter look (seen as a beginner)", "a player in the humble free starter outfit"],
+  ["default", "a player with the free starter look (seen as a beginner)", "a player in the humble free starter outfit"],
+  ["bot lobby", "a match full of computer players or beginners", "a match full of easy targets"],
+  ["one pump", "knocked out with a single shotgun blast", "taken out in one single blast"],
+  ["shotty", "shotgun", "trusty shotgun"],
+  ["loot llama", "a piñata full of supplies", "a magical supply piñata"],
+  ["chests", "treasure boxes with weapons inside", "glowing treasure chests"],
+  ["gold scar", "the best version of a famous rifle", "the legendary golden rifle"],
+  ["og fortnite", "the classic original version of the map", "the beloved original Fortnite of legend"],
+  ["the floss", "a famous dance emote", "the world-famous flossing dance"],
+  ["arena", "the competitive ranked mode", "the high-stakes arena"],
+  ["creative", "player-made maps and mini-games", "the player-built playground"]
+];
+
+const COD = [
+  ["codm", "Call of Duty: Mobile", "Call of Duty on the phone"],
+  ["cod points", "Call of Duty money (bought with real money)", "digital coins purchased with YOUR money"],
+  ["cp", "Call of Duty money (bought with real money)", "digital coins purchased with YOUR money"],
+  ["battle pass", "a season reward pass (bought with real money)", "a VIP reward pass that wants your credit card"],
+  ["killstreak", "a reward for knocking out several players in a row", "a bonus for a dazzling winning streak"],
+  ["scorestreak", "a reward for scoring a lot without going down", "a bonus for a dazzling winning streak"],
+  ["uav", "a spy plane that shows enemies on the map", "an all-seeing spy plane"],
+  ["k/d", "how many times they knocked others out compared to getting knocked out", "their sacred score ratio"],
+  ["kd", "how many times they knocked others out compared to getting knocked out", "their sacred score ratio"],
+  ["loadout", "the set of weapons and gear they chose", "their carefully chosen battle kit"],
+  ["attachments", "upgrade parts for their weapon", "fancy weapon upgrades"],
+  ["gunsmith", "the menu for customizing weapons", "the weapon customization workshop"],
+  ["camo", "a weapon paint design unlocked through challenges", "a hard-earned weapon paint job"],
+  ["quickscope", "a super-fast sniper shot", "a lightning-fast long-range shot"],
+  ["drop shot", "lying down mid-fight to dodge", "diving to the floor like an action hero"],
+  ["slide cancel", "a fast movement trick", "a slippery speed trick"],
+  ["spawn trap", "keeping the enemy stuck where they come back to life", "trapping the enemy in their own base"],
+  ["battle royale", "a mode where the last team standing wins", "a last-team-standing survival battle"],
+  ["br", "battle royale, last team standing wins", "a last-team-standing survival battle"],
+  ["warzone", "the big last-team-standing mode", "the giant survival battlefield"],
+  ["gulag", "a one-on-one duel to earn a second life", "a high-stakes duel for a second chance at life"],
+  ["plates", "armor that protects you", "protective armor plates"],
+  ["downed", "knocked down but not out yet", "wounded on the ground, crying for help"],
+  ["tdm", "team deathmatch, the classic team versus team mode", "the classic team showdown"],
+  ["search and destroy", "a round-based bomb mode with no second lives", "a tense bomb mission with no second chances"],
+  ["snd", "search and destroy, a bomb mode with no second lives", "a tense bomb mission with no second chances"],
+  ["hardpoint", "a mode where teams fight to hold a moving zone", "a battle to hold the hill"],
+  ["domination", "a mode where teams hold three flags", "a war over three flags"],
+  ["hit marker", "proof a shot hit", "proof of a direct hit"],
+  ["headshot", "a hit to the head (worth extra)", "a perfect precision hit"],
+  ["one shot", "knocked out in one hit", "taken out in a single shot"],
+  ["prefire", "shooting before seeing the enemy because you know where they'll be", "fortune-telling where the enemy will appear"],
+  ["flanking", "sneaking around the side to surprise the enemy", "a sneaky surprise attack from the side"],
+  ["flank", "sneak around the side to surprise the enemy", "launch a sneaky side attack"],
+  ["rushing", "charging straight in", "charging in like a bull"],
+  ["prestige", "resetting their level for a badge of honor", "an elite badge of honor"],
+  ["nuke", "the ultimate reward for a huge streak", "the rarest achievement known to gamers"]
+];
+
+const CLASH = [
+  ["elixir leak", "wasting energy by letting it sit full", "letting precious magic energy spill everywhere"],
+  ["positive elixir trade", "spending less energy than the opponent", "a shrewd bargain of magic energy"],
+  ["elixir", "the energy you spend to play cards", "magic purple energy"],
+  ["deck", "their set of 8 cards", "their hand-picked army of 8 cards"],
+  ["cycle deck", "a cheap deck that plays cards fast", "a lightning-fast deck"],
+  ["cycle", "play cheap cards to get back to a good one fast", "shuffle through cards at lightning speed"],
+  ["hog rider", "a famous card, a man riding a pig", "a fearless warrior riding a pig into battle"],
+  ["hog", "the Hog Rider card, a man riding a pig", "the fearless pig-riding warrior"],
+  ["mega knight", "a giant jumping knight card (famously annoying)", "the most hated jumping knight in the land"],
+  ["mk", "the Mega Knight card (famously annoying)", "the most hated jumping knight in the land"],
+  ["pekka", "a heavy armored warrior card", "an unstoppable armored warrior"],
+  ["x-bow", "a giant crossbow card", "a siege crossbow of doom"],
+  ["log", "a rolling log spell card", "the mighty rolling log"],
+  ["zap", "a quick electric spell", "a jolt of lightning"],
+  ["king tower", "the main tower you must protect", "the royal castle"],
+  ["princess tower", "one of the two side towers", "a royal side tower"],
+  ["three crown", "destroyed all three enemy towers (a total win)", "a total, crushing, three-tower victory"],
+  ["3 crown", "destroyed all three enemy towers (a total win)", "a total, crushing, three-tower victory"],
+  ["crowns", "points for destroying towers", "royal victory crowns"],
+  ["heheheha", "the King's laughing emote (used to taunt)", "the King's infamous mocking laugh"],
+  ["emote spam", "sending taunting animations over and over", "an endless barrage of taunts"],
+  ["bm", "bad manners, like taunting", "shockingly bad manners"],
+  ["overtime", "extra time because the game is tied", "a nail-biting sudden-death finish"],
+  ["evo", "an upgraded version of a card", "an evolved super-card"],
+  ["maxed", "fully upgraded", "upgraded to the absolute limit"],
+  ["level 15", "fully upgraded", "upgraded to the absolute limit"],
+  ["clan wars", "team battles with their clan", "epic battles alongside their clan"],
+  ["clan", "their team group in the game", "their loyal clan"],
+  ["path of legends", "the serious ranked mode", "the road to legend status"],
+  ["hard counter", "a card that easily beats another card", "the perfect natural enemy"],
+  ["counter", "a card that beats another card", "a natural enemy"],
+  ["bait", "trick them into wasting a spell", "lay a cunning trap"],
+  ["gems", "the premium money (bought with real money)", "glittering gems purchased with YOUR money"],
+  ["trophies", "points you win or lose each game", "precious ranking points"]
+];
+
+const GACHA = [
+  ["lost the 50/50", "had a coin-flip chance at the character they wanted and lost", "lost a cruel coin flip of fate"],
+  ["won the 50/50", "won a coin-flip chance at the character they wanted", "won a coin flip of fate"],
+  ["50/50", "a coin-flip chance to get the featured character", "a cruel coin flip of fate"],
+  ["gacha", "a game with random prize-machine spins, a lot like a slot machine", "a game built around a very expensive prize machine"],
+  ["pulls", "spins on the prize machine to get characters", "spins of the very expensive prize wheel"],
+  ["pulling", "spinning the prize machine to get characters", "spinning the very expensive prize wheel"],
+  ["pull", "spin the prize machine", "spin the very expensive prize wheel"],
+  ["wishes", "spins on the prize machine", "spins of the very expensive prize wheel"],
+  ["wishing", "spinning the prize machine", "spinning the very expensive prize wheel"],
+  ["warps", "spins on the prize machine", "spins of the very expensive prize wheel"],
+  ["warping", "spinning the prize machine", "spinning the very expensive prize wheel"],
+  ["banner", "the limited-time featured prize machine", "the limited-time prize wheel"],
+  ["pity", "the guaranteed prize after enough unlucky spins", "the consolation prize after endless bad luck"],
+  ["primogems", "Genshin's premium currency (can be bought with real money)", "glittering gems purchased with YOUR money"],
+  ["primos", "Genshin's premium currency (can be bought with real money)", "glittering gems purchased with YOUR money"],
+  ["stellar jade", "Star Rail's premium currency (can be bought with real money)", "glittering jade purchased with YOUR money"],
+  ["welkin", "a cheap monthly pass for daily currency", "a monthly subscription"],
+  ["5 star", "one of the rarest, strongest characters", "an ultra-rare legendary hero"],
+  ["five star", "one of the rarest, strongest characters", "an ultra-rare legendary hero"],
+  ["4 star", "a fairly rare character", "a rare hero"],
+  ["c6", "fully upgraded with duplicate copies (very expensive)", "fully upgraded at enormous expense"],
+  ["e6", "fully upgraded with duplicate copies (very expensive)", "fully upgraded at enormous expense"],
+  ["c0", "with no extra copies", "in their most basic form"],
+  ["e0", "with no extra copies", "in their most basic form"],
+  ["constellation", "an upgrade from getting a duplicate character", "a star-powered upgrade"],
+  ["eidolon", "an upgrade from getting a duplicate character", "a star-powered upgrade"],
+  ["whale", "a player who spends a LOT of real money", "a big spender with a bottomless wallet"],
+  ["whaling", "spending a LOT of real money", "spending money like a billionaire"],
+  ["f2p", "free to play, doesn't spend money", "a thrifty free player"],
+  ["resin", "the energy that limits how much you can play each day", "the daily energy limit"],
+  ["trailblaze power", "the energy that limits how much you can play each day", "the daily energy limit"],
+  ["artifacts", "gear that boosts characters", "enchanted gear"],
+  ["relics", "gear that boosts characters", "enchanted gear"],
+  ["crit", "big extra-damage hits", "devastating critical hits"],
+  ["built", "fully geared up", "fully armed and dangerous"],
+  ["spiral abyss", "the hardest monthly challenge in Genshin", "the dreaded monthly gauntlet"],
+  ["abyss", "the hardest monthly challenge in Genshin", "the dreaded monthly gauntlet"],
+  ["moc", "Memory of Chaos, Star Rail's hardest challenge", "the dreaded chaos gauntlet"],
+  ["paimon", "the small floating guide character who talks a lot", "the chatty floating sidekick"],
+  ["emergency food", "a joke nickname for the guide character Paimon", "a joke nickname for the chatty sidekick"],
+  ["traveler", "the main character in Genshin", "the hero of the story"],
+  ["trailblazer", "the main character in Star Rail", "the hero of the story"],
+  ["teyvat", "the fantasy world of Genshin", "the magical land of Teyvat"],
+  ["hoyoverse", "the company that makes these games", "the mighty company behind the games"],
+  ["leaks", "secret info about future updates", "forbidden secrets from the future"],
+  ["comfort character", "a favorite character they feel attached to", "a beloved digital best friend"],
+  ["simping", "being super devoted to a crush (often a character)", "swooning hopelessly"],
+  ["simp", "someone super devoted to a crush", "a hopeless romantic"]
+];
+
+// terms that belong to only one of the two HoYoverse games
+const GENSHIN_ONLY = new Set(["wishes", "wishing", "primogems", "primos", "welkin", "c6", "c0", "constellation", "artifacts", "resin", "spiral abyss", "abyss", "paimon", "emergency food", "traveler", "teyvat"]);
+const HSR_ONLY = new Set(["warps", "warping", "stellar jade", "e6", "e0", "eidolon", "relics", "trailblaze power", "moc", "trailblazer"]);
+const GENSHIN = GACHA.filter((e) => !HSR_ONLY.has(e[0])).concat([
+  ["vision", "the magic gem that gives a character elemental power", "a sacred gem of elemental power"],
+  ["reactions", "combining elements like fire and water for extra damage", "spectacular elemental combos"],
+  ["mondstadt", "one of the countries in the Genshin world", "the windy kingdom of Mondstadt"],
+  ["fontaine", "one of the countries in the Genshin world", "the water kingdom of Fontaine"]
+]);
+const HSR = GACHA.filter((e) => !GENSHIN_ONLY.has(e[0])).concat([
+  ["express supply pass", "a cheap monthly pass for daily currency", "a monthly subscription"],
+  ["astral express", "the space train the heroes travel on", "the legendary space train"],
+  ["pom-pom", "the little train conductor character", "the tiny bossy train conductor"],
+  ["simulated universe", "a replayable challenge mode", "an endless trial of the cosmos"],
+  ["light cone", "a weapon-like gear item for a character", "a powerful cosmic relic"],
+  ["light cones", "weapon-like gear items for characters", "powerful cosmic relics"],
+  ["pure fiction", "a hard challenge mode", "a dreaded challenge gauntlet"],
+  ["apocalyptic shadow", "a hard boss challenge mode", "a dreaded boss gauntlet"],
+  ["kafka", "a popular villain character", "the glamorous villain Kafka"]
+]);
+
+const AMONGUS = [
+  ["impostors", "the secret bad guys", "the hidden villains"],
+  ["impostor", "the secret bad guy", "the hidden villain among us"],
+  ["imposter", "the secret bad guy", "the hidden villain among us"],
+  ["crewmates", "regular team members doing chores", "the innocent, hardworking crew"],
+  ["crewmate", "a regular team member doing chores", "an innocent, hardworking crew member"],
+  ["sus", "acting like the secret bad guy", "as suspicious as a cookie jar with crumbs next to it"],
+  ["vented", "used a secret tunnel (only the bad guy can)", "slithered through a secret tunnel"],
+  ["venting", "using a secret tunnel (only the bad guy can)", "slithering through a secret tunnel"],
+  ["vent", "a secret tunnel only the bad guy can use", "a sneaky secret tunnel"],
+  ["emergency meeting", "everyone stops to discuss and vote", "an urgent courtroom drama"],
+  ["voted out", "kicked out by the group's vote", "banished by the people"],
+  ["ejected", "kicked out by the group's vote", "launched into space by popular vote"],
+  ["skip vote", "chose not to vote anyone out", "chose mercy"],
+  ["fake tasks", "pretending to do chores (a bad-guy trick)", "acting out pretend chores"],
+  ["tasks", "the little chores in the game", "the ship's daily chores"],
+  ["self report", "the bad guy 'finding' the body they caused", "a sneaky villain playing innocent witness"],
+  ["third impostor", "someone defending the bad guy", "a suspicious accomplice"],
+  ["hard clear", "proved definitely innocent", "proven 100% innocent"],
+  ["visual task", "a chore others can watch you do (proves innocence)", "a public display of innocence"],
+  ["medbay scan", "a chore that proves innocence", "a scan that proves innocence"],
+  ["sabotage", "the bad guy breaking things on the ship", "villainous sabotage"],
+  ["lights", "the lights were turned off by the bad guy", "plunged into terrifying darkness"],
+  ["reactor", "an emergency where the ship's engine is about to blow", "the ship's engine about to explode"],
+  ["o2", "an emergency where the ship's air is running out", "the ship's air running out"],
+  ["cams", "the security cameras", "the all-seeing security cameras"],
+  ["admin table", "a map showing where people are", "the map of all souls"],
+  ["electrical", "the electrical room (a dangerous spot)", "the most dangerous room on the ship"],
+  ["double kill", "the bad guys eliminated two players at once", "a shocking double ambush"],
+  ["stack kill", "eliminating someone hidden in a crowd", "a sneaky ambush hidden in a crowd"],
+  ["dead body reported", "someone found an eliminated player", "a gasp-worthy discovery"],
+  ["ghost", "a player who's been eliminated", "a wandering spirit"],
+  ["amogus", "a silly meme name for Among Us", "a silly meme name for Among Us"],
+  ["sussy baka", "a silly meme insult meaning 'you're suspicious'", "a silly meme way of saying 'you suspicious little rascal'"]
+];
+
+const REVERSE_GENERAL = [
+  ["i'm proud of you", "you're cracked fr"],
+  ["i love you", "you're goated, no cap"],
+  ["good job", "huge W"],
+  ["well done", "W"],
+  ["go to bed", "forced logout"],
+  ["bedtime", "forced logout time"],
+  ["turn it off", "rage quit it"],
+  ["turn off", "log off"],
+  ["dinner is ready", "food just spawned"],
+  ["dinner", "the food buff"],
+  ["homework", "the homework side quest"],
+  ["chores", "daily quests"],
+  ["go outside", "touch grass"],
+  ["i don't know", "idk"],
+  ["be right back", "brb"],
+  ["for real", "fr"],
+  ["honestly", "ngl"],
+  ["telling the truth", "no cap"],
+  ["lying", "capping"],
+  ["suspicious", "sus"],
+  ["boring", "mid"],
+  ["delicious", "bussin"],
+  ["amazing", "goated"],
+  ["great", "goated"],
+  ["beginner", "noob"],
+  ["friends", "squad"],
+  ["okay", "bet"],
+  ["right now", "rn"],
+  ["money", "V-Bucks"],
+  ["one more game", "one more game (it's never one more game)"]
+];
+// how each game's players would say everyday adult phrases
+const REVERSE_BY_GAME = {
+  roblox: {
+    "dinner is ready": "food just spawned in the kitchen, free UGC drop",
+    "come eat": "teleport to the kitchen",
+    "turn it off": "leave the experience",
+    "good job": "you beat the obby, W",
+    "homework": "the homework obby",
+    "i'm proud of you": "you're #1 on the leaderboard fr",
+    "go outside": "join the real-life Brookhaven server (outside)",
+    "chores": "tycoon upgrades for the house",
+    "bedtime": "server shutdown time",
+    "go to bed": "log off, even the devs sleep",
+    "i don't know": "idk, ask an admin",
+    "i love you": "you're my rarest limited, no cap",
+    "clean your room": "your room is the hardest obby ever, go beat it",
+    "money": "Robux",
+    "friends": "your friends list",
+    "hurry up": "speedrun it",
+    "school": "the school roleplay server",
+    "shower": "the water obby",
+    "brush your teeth": "equip the toothbrush tool",
+    "no": "admin says no",
+    "yes": "W, approved"
+  },
+  minecraft: {
+    "dinner is ready": "food just spawned, fill your hunger bar",
+    "come eat": "come refill your hunger bar",
+    "turn it off": "save and quit to title",
+    "good job": "achievement unlocked, W",
+    "homework": "the homework enchanting grind",
+    "i'm proud of you": "you're full netherite fr",
+    "go outside": "go explore a real biome (outside)",
+    "chores": "survival mode tasks",
+    "bedtime": "night is falling, place your bed",
+    "go to bed": "go sleep before the phantoms spawn",
+    "i don't know": "idk, check the wiki",
+    "i love you": "you're worth more than a stack of diamonds",
+    "clean your room": "go clear out the mob spawner (your room)",
+    "money": "diamonds",
+    "friends": "your SMP crew",
+    "hurry up": "sprint, don't walk",
+    "school": "the school stronghold",
+    "shower": "go stand in a water block",
+    "brush your teeth": "craft some clean teeth",
+    "no": "denied, creeper energy",
+    "yes": "approved, W"
+  },
+  brawl: {
+    "dinner is ready": "the dinner Starr Drop just landed",
+    "come eat": "come grab your power cubes (dinner)",
+    "turn it off": "leave the match",
+    "good job": "you hit rank 30, W",
+    "homework": "the homework trophy road",
+    "i'm proud of you": "you're a legendary brawler fr",
+    "go outside": "go touch the real bushes (outside)",
+    "chores": "club league chores",
+    "bedtime": "trophy pushing is over for today",
+    "go to bed": "go to bed, the bushes can wait",
+    "i don't know": "idk, wait for Brawl Talk",
+    "i love you": "you're my main, no cap",
+    "clean your room": "your room needs a full map wall break",
+    "money": "gems",
+    "friends": "your club",
+    "hurry up": "use your gadget and hurry",
+    "school": "school showdown",
+    "shower": "brawl ball, but with soap",
+    "brush your teeth": "charge your super and brush your teeth",
+    "no": "that's a hard L",
+    "yes": "gg, W"
+  },
+  fortnite: {
+    "dinner is ready": "the battle bus is boarding for dinner",
+    "come eat": "hot drop into the kitchen",
+    "turn it off": "back to the lobby",
+    "good job": "Victory Royale, W",
+    "homework": "the homework quest line",
+    "i'm proud of you": "you're cracked, Victory Royale energy fr",
+    "go outside": "go explore the real island (outside)",
+    "chores": "weekly quests around the house",
+    "bedtime": "the storm is closing in, bedtime",
+    "go to bed": "the storm is closing, get to bed",
+    "i don't know": "idk, it's not in the item shop",
+    "i love you": "you're my favorite skin, no cap",
+    "clean your room": "your room needs a full rebuild, no mats left on the floor",
+    "money": "V-Bucks",
+    "friends": "your squad",
+    "hurry up": "the storm is coming, rotate now",
+    "school": "the school POI",
+    "shower": "go chug a splash",
+    "brush your teeth": "shield up your teeth",
+    "no": "nah, that's a default move",
+    "yes": "dub"
+  },
+  cod: {
+    "dinner is ready": "dinner just dropped, rotate to the kitchen",
+    "come eat": "come grab your plates (dinner plates)",
+    "turn it off": "leave the match, no rage quitting",
+    "good job": "killstreak earned, W",
+    "homework": "the homework mission briefing",
+    "i'm proud of you": "your K/D is cracked fr",
+    "go outside": "deploy to the real map (outside)",
+    "chores": "daily challenges around the house",
+    "bedtime": "match over, back to the lobby",
+    "go to bed": "match over, back to the lobby (bed)",
+    "i don't know": "idk, no UAV on that",
+    "i love you": "you're my squad leader, no cap",
+    "clean your room": "your room needs a full clear, every corner",
+    "money": "COD Points",
+    "friends": "your squad",
+    "hurry up": "stop camping and push",
+    "school": "the school map",
+    "shower": "full armor wash",
+    "brush your teeth": "reload your toothbrush",
+    "no": "negative, soldier",
+    "yes": "copy that, W"
+  },
+  clash: {
+    "dinner is ready": "dinner is ready, no elixir leak, come now",
+    "come eat": "come eat, your elixir is full",
+    "turn it off": "end the battle",
+    "good job": "three crown win, W",
+    "homework": "the homework Path of Legends",
+    "i'm proud of you": "you're maxed out, level 15 fr",
+    "go outside": "go see the real arena (outside)",
+    "chores": "clan war chores",
+    "bedtime": "battle's over, the King needs sleep",
+    "go to bed": "go to bed, heheheha",
+    "i don't know": "idk, it's random like a chest",
+    "i love you": "you're my favorite card in the deck, no cap",
+    "clean your room": "your room needs a three crown cleanup",
+    "money": "gems",
+    "friends": "your clan",
+    "hurry up": "it's overtime, hurry",
+    "school": "the school arena",
+    "shower": "drop the log and shower",
+    "brush your teeth": "zap your teeth clean",
+    "no": "heheheha, no",
+    "yes": "W, three crowns"
+  },
+  genshin: {
+    "dinner is ready": "dinner is a guaranteed 5 star, come eat",
+    "come eat": "come restore your HP",
+    "turn it off": "leave Teyvat for now",
+    "good job": "you won the 50/50, W",
+    "homework": "the homework daily commissions",
+    "i'm proud of you": "you're a five star, C6 fr",
+    "go outside": "go explore real-life Teyvat (outside)",
+    "chores": "daily commissions",
+    "bedtime": "you're out of resin, bedtime",
+    "go to bed": "you're out of resin for today, go to bed",
+    "i don't know": "idk, ask Paimon",
+    "i love you": "you're my comfort character, no cap",
+    "clean your room": "your room is the Spiral Abyss, go clear it",
+    "money": "primogems",
+    "friends": "your co-op party",
+    "hurry up": "sprint, your stamina is full",
+    "school": "the Sumeru Akademiya (school)",
+    "shower": "go swim in Fontaine (shower)",
+    "brush your teeth": "use a Hydro skill on your teeth",
+    "no": "lost the 50/50 on that one, no",
+    "yes": "won the 50/50, yes"
+  },
+  hsr: {
+    "dinner is ready": "the Astral Express dining car is open, come eat",
+    "come eat": "come restore your HP",
+    "turn it off": "close the game, the train can wait",
+    "good job": "you cleared Memory of Chaos, W",
+    "homework": "the homework daily training",
+    "i'm proud of you": "you're a five star, E6 fr",
+    "go outside": "go explore a real planet (outside)",
+    "chores": "daily training",
+    "bedtime": "you're out of trailblaze power, bedtime",
+    "go to bed": "you're out of trailblaze power, go to bed",
+    "i don't know": "idk, ask Pom-Pom",
+    "i love you": "you're my comfort character, no cap",
+    "clean your room": "your room is Memory of Chaos, go clear it",
+    "money": "stellar jade",
+    "friends": "your Astral Express crew",
+    "hurry up": "the train is leaving, hurry",
+    "school": "the space station academy (school)",
+    "shower": "a quick trip to the water planet (shower)",
+    "brush your teeth": "equip your toothbrush light cone",
+    "no": "lost the 50/50 on that one, no",
+    "yes": "won the 50/50, yes"
+  },
+  amongus: {
+    "dinner is ready": "emergency meeting in the kitchen, dinner is ready",
+    "come eat": "report to the cafeteria",
+    "turn it off": "leave the ship",
+    "good job": "all tasks complete, crewmates win",
+    "homework": "your homework tasks (and they're visual tasks)",
+    "i'm proud of you": "you're a hard clear, I trust you fr",
+    "go outside": "go do tasks outside the ship",
+    "chores": "your tasks",
+    "bedtime": "lights are out, bedtime",
+    "go to bed": "go to bed or you're getting ejected",
+    "i don't know": "idk, I was in electrical",
+    "i love you": "you're the only one I trust on this ship, no cap",
+    "clean your room": "you have tasks in your room, and they're visual tasks",
+    "who did this": "who's sus",
+    "money": "beans",
+    "friends": "your crewmates",
+    "hurry up": "reactor meltdown, hurry",
+    "school": "the Skeld (school)",
+    "shower": "medbay scan (shower)",
+    "brush your teeth": "do the toothbrush task",
+    "no": "skip vote, no",
+    "yes": "voted, yes"
+  }
+};
+const REVERSE_GAME = Object.fromEntries(Object.entries(REVERSE_BY_GAME).map(([g, m]) => [g, Object.entries(m)]));
+
+const GAMES = {
+  any: { name: "Any game", full: "video games", who: "your_kid", dict: [] },
+  roblox: { name: "Roblox", full: "Roblox", who: "xX_your_kid_Xx", dict: ROBLOX },
+  fortnite: { name: "Fortnite", full: "Fortnite", who: "your_kid", dict: FORTNITE },
+  minecraft: { name: "Minecraft", full: "Minecraft", who: "Steve_jr", dict: MINECRAFT },
+  cod: { name: "Call of Duty", full: "Call of Duty (including Call of Duty: Mobile)", who: "your_kid", dict: COD },
+  clash: { name: "Clash Royale", full: "Clash Royale", who: "your_kid", dict: CLASH },
+  genshin: { name: "Genshin Impact", full: "Genshin Impact", who: "Traveler", dict: GENSHIN },
+  hsr: { name: "Star Rail", full: "Honkai: Star Rail", who: "Trailblazer", dict: HSR },
+  amongus: { name: "Among Us", full: "Among Us", who: "red", dict: AMONGUS },
+  brawl: { name: "Brawl Stars", full: "Brawl Stars", who: "your_kid", dict: BRAWL }
+};
+
+const EXAMPLES = {
+  any: [
+    "bro we got cooked, the other team was cracked and our healer was afk. im tilted fr",
+    "gg ez no cap they were all bots",
+    "lowkey that new skin is mid but the battle pass is bussin",
+    "one more game then I'll get off ong"
+  ],
+  roblox: [
+    "can I get robux for a game pass? this obby is so hard bruh",
+    "some bacon hair scammed me while trading my limiteds smh",
+    "brookhaven was mid so we played doors, I got cooked lol",
+    "the admin abuse in grow a garden is crazy no cap"
+  ],
+  fortnite: [
+    "where we dropping? hot drop tilted towers, I need a gold scar",
+    "bro got third partied in the storm and I had no mats, we're cooked",
+    "I got a victory royale in zero build, gg ez",
+    "can I get v-bucks for the battle pass? the item shop is bussin today"
+  ],
+  minecraft: [
+    "a creeper blew up my house and I lost all my diamonds bruh",
+    "we're building a mob farm on the smp, no cap it's goated",
+    "I got full netherite and an elytra, the ender dragon is cooked",
+    "this kid was griefing on the server with a hacked client smh"
+  ],
+  cod: [
+    "my k/d is cracked, I got a nuke in tdm no cap",
+    "lost the gulag cuz I had no plates bruh",
+    "they were camping and spawn trapping us the whole match, so toxic",
+    "my loadout is meta, quickscope headshot every time"
+  ],
+  clash: [
+    "bro the mega knight is so op, I got three crown and he spammed heheheha",
+    "my hog cycle deck is goated, positive elixir trade every time",
+    "lost in overtime to a pay to win level 15 deck smh",
+    "can I get gems? I need the evo for clan wars"
+  ],
+  genshin: [
+    "I lost the 50/50 again, 80 pulls and no 5 star, I'm so cooked",
+    "can I buy welkin? I need primos for the new banner",
+    "my main is c6 now, she's cracked in the spiral abyss",
+    "paimon is emergency food lol, the leaks say a new five star is coming"
+  ],
+  hsr: [
+    "I'm saving stellar jade for the next banner, the leaks look goated",
+    "my e6 dps is cracked in moc no cap",
+    "I spent all my trailblaze power farming relics bruh",
+    "lost the 50/50 on warps again, I'm so tilted"
+  ],
+  amongus: [
+    "red is sus, I saw them vent in electrical",
+    "emergency meeting! it was a self report, I'm a hard clear",
+    "they were faking tasks, vote out blue",
+    "double kill in the reactor, the impostors are cracked"
+  ],
+  brawl: [
+    "bro I was trophy pushing and got teamers in solo showdown, im so tilted",
+    "my mortis main is goated, I hit hypercharge and wiped the whole team. gg ez",
+    "can I get gems for the brawl pass? the new brawler is so op",
+    "lowkey threw in gem grab, they were bush camping the whole time"
+  ]
+};
+const REVERSE_EXAMPLES = [
+  "Dinner is ready, turn it off and come eat.",
+  "Good job finishing your homework. I'm proud of you.",
+  "Go outside for an hour, then chores, then bedtime.",
+  "I don't know what you're saying but I love you."
+];
+
+const INTROS = [
+  "Brace yourself. Your child reports the following:",
+  "Breaking news from the living room:",
+  "Dearest Out-of-touch Adult, gather round for a tale of great struggle:",
+  "Attention, Out-of-touch Adult. Translation incoming:",
+  "This just in, straight from the headset:"
+];
+const OUTROS = [
+  "Please send snacks.",
+  "They will need a moment to recover.",
+  "This is, apparently, extremely serious.",
+  "The household is asked to remain calm."
+];
+
+const $ = (id) => document.getElementById(id);
+const state = { game: "roblox", level: 3, reverse: false, ai: null };
+const input = $("input"), output = $("output");
+
+function esc(s) { return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]); }
+function escRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+function hash(s) { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h); }
+
+function dedupe(entries) {
+  const seen = new Set();
+  return entries.filter((e) => { const k = e[0].toLowerCase(); return seen.has(k) ? false : (seen.add(k), true); });
+}
+
+function entriesFor(game) {
+  const specific = GAMES[game].dict;
+  const seen = new Set(), list = [];
+  for (const e of [...specific, ...GENERAL]) {
+    const k = e[0].toLowerCase();
+    if (!seen.has(k)) { seen.add(k); list.push(e); }
+  }
+  return list;
+}
+
+function buildMatcher(list) {
+  const terms = list.map((e) => e[0]).sort((a, b) => b.length - a.length).map(escRe);
+  const map = new Map(list.map((e) => [e[0].toLowerCase(), e]));
+  // apostrophes count as part of a word so "I'll" never matches "l"
+  return { re: new RegExp("(?<![\\w'])(" + terms.join("|") + ")(?![\\w'])", "gi"), map };
+}
+const matchers = {};
+function matcher(key, list) { return matchers[key] || (matchers[key] = buildMatcher(list)); }
+
+function matchCase(orig, rep) {
+  if (orig.length > 1 && orig === orig.toUpperCase() && /[A-Z]{2}/.test(orig) && orig.length > 3) return rep.toUpperCase();
+  return rep;
+}
+
+function translateDictionary(text) {
+  const forward = !state.reverse;
+  const list = forward ? entriesFor(state.game) : dedupe([...(REVERSE_GAME[state.game] || []), ...REVERSE_GENERAL]);
+  const m = matcher((forward ? "f-" : "r-") + state.game, list);
+  const parts = [], found = new Map();
+  let last = 0;
+  text.replace(m.re, (hit, _t, offset) => {
+    const e = m.map.get(hit.toLowerCase());
+    if (!e) return hit;
+    parts.push({ t: text.slice(last, offset) });
+    const rep = forward ? (state.level === 1 ? e[1] : e[2]) : e[1];
+    parts.push({ t: matchCase(hit, rep), orig: hit });
+    if (!found.has(e[0].toLowerCase())) found.set(e[0].toLowerCase(), { term: hit, meaning: forward ? e[1] : "becomes “" + e[1] + "”" });
+    last = offset + hit.length;
+    return hit;
+  });
+  parts.push({ t: text.slice(last) });
+  // capitalise the first letter of each sentence for readability
+  let startOfSentence = true;
+  for (const p of parts) {
+    if (!p.t) continue;
+    if (startOfSentence) p.t = p.t.replace(/^(\s*)([a-z])/, (_, s, c) => s + c.toUpperCase());
+    startOfSentence = /[.!?]\s*$/.test(p.t) || (startOfSentence && !p.t.trim());
+  }
+  return { parts, glossary: [...found.values()] };
+}
+
+function render() {
+  const text = input.value;
+  $("count").textContent = text.length + " / 3000";
+  output.classList.toggle("reverse-out", state.reverse);
+  if (!text.trim()) {
+    output.classList.add("placeholder");
+    output.textContent = state.reverse ? "Their version will appear here." : "The grown-up version will appear here.";
+    setSource(false);
+    renderGlossary([]);
+    $("ask").hidden = true;
+    return;
+  }
+  output.classList.remove("placeholder");
+  $("ask").hidden = !sample;
+  if (state.ai && state.ai.key === aiKey()) {
+    output.textContent = state.ai.text;
+    setSource(true);
+    renderGlossary(state.ai.glossary);
+    return;
+  }
+  const { parts, glossary } = translateDictionary(text);
+  let html = parts.map((p) => p.orig ? '<mark title="' + esc(p.orig) + '">' + esc(p.t) + "</mark>" : esc(p.t)).join("");
+  if (!state.reverse && state.level === 3) {
+    const h = hash(text);
+    html = html.trim() +
+      '<span class="narration">' + esc(OUTROS[(h >> 3) % OUTROS.length]) + "</span>";
+  }
+  output.innerHTML = html;
+  setSource(false, glossary.length === 0);
+  renderGlossary(glossary);
+}
+
+function setSource(ai, nothingFound) {
+  $("source").classList.toggle("ai", ai);
+  $("sourceText").textContent = ai ? "Rewritten by Claude"
+    : nothingFound ? "No gamer words spotted. Try picking a different game above."
+    : "Instant translation from the built-in dictionary";
+}
+
+function renderGlossary(items) {
+  const list = $("glList");
+  list.textContent = "";
+  $("glossary").hidden = items.length === 0;
+  for (const g of items) {
+    const li = document.createElement("li");
+    const t = document.createElement("span"); t.className = "gl-term"; t.textContent = g.term;
+    const d = document.createElement("span"); d.className = "gl-mean"; d.textContent = g.meaning;
+    li.append(t, d); list.append(li);
+  }
+}
+
+function renderExamples() {
+  const box = $("examples");
+  box.textContent = "";
+  for (const ex of state.reverse ? REVERSE_EXAMPLES : EXAMPLES[state.game]) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "ex"; b.textContent = ex; b.title = ex;
+    b.onclick = () => { input.value = ex; state.ai = null; render(); };
+    box.append(b);
+  }
+}
+
+function renderLangs() {
+  const game = GAMES[state.game];
+  $("fromSlot").textContent = state.reverse ? "Out-of-touch Adult English" : game.name;
+  $("toSlot").textContent = state.reverse ? game.name : "Out-of-touch Adult English";
+  $("swap").classList.toggle("flipped", state.reverse);
+  $("inPanel").classList.toggle("reverse", state.reverse);
+  $("inTitle").textContent = state.reverse ? "What you want to say" : "What they said";
+  $("outTitle").textContent = state.reverse ? "How they'd say it" : "What they meant";
+  input.placeholder = state.reverse ? "Type what you want to tell them..." : "Type or paste what they said...";
+  document.querySelector(".drama").hidden = state.reverse;
+  for (const c of document.querySelectorAll("#games .chip")) c.setAttribute("aria-pressed", String(c.dataset.game === state.game));
+  for (const b of document.querySelectorAll("#drama button")) b.setAttribute("aria-pressed", String(Number(b.dataset.level) === state.level));
+}
+
+function aiKey() { return [input.value, state.game, state.level, state.reverse].join("|"); }
+
+// ---- Claude ----
+let sample = null, ctl = null;
+const LEVELS = {
+  1: "clear and calm, just the facts, in one to three short sentences",
+  3: "wildly over the top, dramatic and genuinely funny, like a soap opera narrator or a sports commentator, with silly comparisons and jokes, but still easy to understand. Start directly with the translation, with no introduction line like 'Breaking news:'"
+};
+function promptFor(text) {
+  const game = GAMES[state.game].full;
+  if (state.reverse) {
+    return "Rewrite this out of touch adult's message the way a kid or teen who plays " + game +
+      " would say it, using current gaming slang" + (state.game === "any" ? "" : " and " + game + " terms") +
+      ". Keep it short, playful and family friendly, and keep the meaning.\n" +
+      'Reply with only JSON: {"translation": string, "glossary": [{"term": string, "meaning": string}]}. ' +
+      "The glossary lists each slang word you used with a plain meaning for the out of touch adult (at most 8).\n\nMessage:\n\"\"\"" + text + "\"\"\"";
+  }
+  return "You translate what kids and teens say while playing " + game +
+    " (gaming chat and internet slang) into simple, plain English an out of touch adult will understand. " +
+    "Explain any " + (state.game === "any" ? "game" : game) + " terms in plain words inside the translation. " +
+    "Tone: " + LEVELS[state.level] + ". Keep the original meaning and keep it family friendly; soften any swearing.\n" +
+    'Reply with only JSON: {"translation": string, "glossary": [{"term": string, "meaning": string}]}. ' +
+    "The glossary lists each slang word or game term you decoded with a short plain meaning (at most 10).\n\nText:\n\"\"\"" + text + "\"\"\"";
+}
+
+$("ask").onclick = async () => {
+  const text = input.value.trim();
+  if (!text || !sample) return;
+  if (ctl) { ctl.abort(); return; }
+  ctl = new AbortController();
+  const key = aiKey();
+  $("askText").textContent = "Thinking... (tap to stop)";
+  try {
+    const res = await sample.json(promptFor(text), { signal: ctl.signal, modelTier: "quick" });
+    const tr = res && typeof res.translation === "string" ? res.translation : "";
+    if (!tr) throw { code: "invalid_json" };
+    const glossary = Array.isArray(res.glossary) ? res.glossary.filter((g) => g && g.term).map((g) => ({ term: String(g.term), meaning: String(g.meaning || "") })) : [];
+    state.ai = { key, text: tr, glossary };
+    render();
+  } catch (e) {
+    const code = e && e.code;
+    if (code === "not_granted" || code === "sampling_disabled" || code === "not_declared" || code === "capability_disabled" || code === "capability_removed") {
+      sample = null; $("ask").hidden = true;
+      toast("Claude isn't available here, so the dictionary will keep translating.");
+    } else if (code === "rate_limited") {
+      toast("Claude needs a short break. Try again in a minute.");
+    } else if (code === "invalid_json" || code === "empty_completion") {
+      toast("Claude's answer came back garbled. Tap to try again.");
+    } else if (code === "refused") {
+      toast("Claude wouldn't translate that one. Try rewording it.");
+    } else if (code !== "cancelled") {
+      toast("Couldn't reach Claude. Check the connection and try again.");
+    }
+  } finally {
+    ctl = null;
+    $("askText").textContent = "Translate with Claude";
+  }
+};
+
+// ---- controls ----
+let timer = 0;
+input.addEventListener("input", () => {
+  if (input.value.length > 3000) input.value = input.value.slice(0, 3000);
+  clearTimeout(timer); timer = setTimeout(render, 120);
+});
+$("clear").onclick = () => { input.value = ""; state.ai = null; render(); input.focus(); };
+$("swap").onclick = () => {
+  state.reverse = !state.reverse;
+  state.ai = null;
+  input.value = state.reverse ? REVERSE_EXAMPLES[0] : EXAMPLES[state.game][0];
+  renderLangs(); renderExamples(); render();
+};
+for (const c of document.querySelectorAll("#games .chip")) c.onclick = () => {
+  state.game = c.dataset.game;
+  try { localStorage.setItem("gt-game", state.game); } catch (e) {}
+  if (!state.reverse && Object.values(EXAMPLES).flat().includes(input.value)) input.value = EXAMPLES[state.game][0];
+  renderLangs(); renderExamples(); render();
+};
+for (const b of document.querySelectorAll("#drama button")) b.onclick = () => {
+  state.level = Number(b.dataset.level);
+  try { localStorage.setItem("gt-level", String(state.level)); } catch (e) {}
+  renderLangs(); render();
+};
+$("copy").onclick = async () => {
+  const text = output.classList.contains("placeholder") ? "" : output.innerText.trim();
+  if (!text) return;
+  try { await navigator.clipboard.writeText(text); toast("Copied"); }
+  catch (e) {
+    const r = document.createRange(); r.selectNodeContents(output);
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    toast("Selected. Press copy on your phone.");
+  }
+};
+let toastTimer = 0;
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
+}
+
+try {
+  const g = localStorage.getItem("gt-game"); if (g && GAMES[g]) state.game = g;
+  const l = Number(localStorage.getItem("gt-level")); if (l === 1 || l === 3) state.level = l;
+} catch (e) {}
+input.value = EXAMPLES[state.game][0];
+renderLangs(); renderExamples(); render();
+
+if (window.claude && window.claude.use) {
+  window.claude.use("sample").then((s) => { sample = s; render(); }).catch(() => {});
+}
+</script>
+<script type="module">
+// Live listening uses the browser's own speech recognition; uploaded files are
+// transcribed on the device with a small Whisper model, so no audio leaves the phone.
+const TRANSFORMERS_URL = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2";
+const MODEL = "Xenova/whisper-tiny.en";
+const MAX = 3000;
+
+const recBtn = $("rec"), recLabel = $("recLabel"), fileInput = $("file");
+const box = $("audioStatus"), boxText = $("audioText"), spin = $("audioSpin"), stopBtn = $("audioStop");
+
+function status(text, { busy = false, stoppable = false } = {}) {
+  box.hidden = !text;
+  boxText.textContent = text || "";
+  spin.hidden = !busy;
+  stopBtn.hidden = !stoppable;
+}
+function setInput(text) {
+  input.value = text.slice(0, MAX);
+  state.ai = null;
+  render();
+}
+
+// ---- live recording ----
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null;
+function stopRecording() { if (rec) rec.stop(); }
+recBtn.onclick = () => {
+  if (rec) { stopRecording(); return; }
+  if (!SR) {
+    status("This browser can't listen live. Tap the microphone key on your keyboard instead, or upload a recording.");
+    return;
+  }
+  rec = new SR();
+  rec.continuous = true;
+  rec.interimResults = true;
+  rec.lang = "en-US";
+  const base = input.value.trim() && !Object.values(EXAMPLES).flat().includes(input.value) ? input.value.trimEnd() + " " : "";
+  rec.onresult = (e) => {
+    let heard = "";
+    for (let i = 0; i < e.results.length; i++) heard += e.results[i][0].transcript + (e.results[i].isFinal ? " " : "");
+    setInput(base + heard);
+  };
+  rec.onerror = (e) => {
+    if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+      status("The microphone is blocked. Allow microphone access for this site in your browser settings, then tap Record again.");
+    } else if (e.error !== "no-speech" && e.error !== "aborted") {
+      status("Listening stopped because of a problem (" + e.error + "). Tap Record to try again.");
+    }
+  };
+  rec.onend = () => {
+    rec = null;
+    recBtn.classList.remove("live");
+    recLabel.textContent = "Record";
+    if (!boxText.textContent.startsWith("The microphone") && !boxText.textContent.startsWith("Listening stopped")) status("");
+  };
+  try {
+    rec.start();
+    recBtn.classList.add("live");
+    recLabel.textContent = "Stop";
+    status("Listening... hold your phone near the game chat.", { busy: true, stoppable: true });
+  } catch (err) {
+    rec = null;
+    status("Couldn't start listening. Tap Record to try again.");
+  }
+};
+
+// ---- uploaded recordings ----
+let asrPromise = null;
+function getAsr() {
+  if (!asrPromise) {
+    asrPromise = import(TRANSFORMERS_URL).then(({ pipeline }) =>
+      pipeline("automatic-speech-recognition", MODEL, {
+        progress_callback: (p) => {
+          if (p.status === "progress" && /\.onnx$/.test(p.file || "")) {
+            status("Downloading the listening engine (first time only)... " + Math.round(p.progress || 0) + "%", { busy: true });
+          }
+        }
+      })
+    ).catch((err) => { asrPromise = null; throw err; });
+  }
+  return asrPromise;
+}
+
+async function decodeTo16k(file) {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const ctx = new AC();
+  const decoded = await ctx.decodeAudioData(await file.arrayBuffer());
+  if (ctx.close) ctx.close();
+  const off = new OfflineAudioContext(1, Math.ceil(decoded.duration * 16000), 16000);
+  const src = off.createBufferSource();
+  src.buffer = decoded;
+  src.connect(off.destination);
+  src.start();
+  const rendered = await off.startRendering();
+  return { samples: rendered.getChannelData(0), seconds: decoded.duration };
+}
+
+$("upload").onclick = () => { stopRecording(); fileInput.click(); };
+fileInput.onchange = async () => {
+  const file = fileInput.files[0];
+  fileInput.value = "";
+  if (!file) return;
+  recBtn.disabled = true; $("upload").disabled = true;
+  try {
+    status("Opening " + file.name + "...", { busy: true });
+    let audio;
+    try { audio = await decodeTo16k(file); }
+    catch (err) { status("That file couldn't be opened. Try an MP3, M4A, WAV or video recording."); return; }
+    status("Getting the listening engine ready...", { busy: true });
+    let asr;
+    try { asr = await getAsr(); }
+    catch (err) { status("The listening engine didn't download. Check the internet connection and try again."); return; }
+    const mins = Math.max(1, Math.round(audio.seconds / 60));
+    status("Listening to the recording (" + mins + " min). This can take a minute or two...", { busy: true });
+    const out = await asr(audio.samples, { chunk_length_s: 30, stride_length_s: 5 });
+    const text = (out && out.text ? out.text : "").trim();
+    if (!text) { status("No talking was found in that recording."); return; }
+    setInput(text);
+    status("");
+    toast("Recording transcribed");
+  } catch (err) {
+    status("Something went wrong while listening to that file. Try a shorter recording.");
+  } finally {
+    recBtn.disabled = false; $("upload").disabled = false;
+  }
+};
+
+stopBtn.onclick = stopRecording;
+</script>
+
+</body>
+</html>
