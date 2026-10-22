@@ -1276,7 +1276,7 @@ const INLINE = {
   "lol": "haha", "lmao": "haha", "smh": "ugh", "bruh": "come on", "cracked": "amazing", "toxic": "mean",
   "one more game": "one more game", "meta": "the top strategy", "scammed": "cheated", "trading": "trading",
   "w": "a win", "l": "a loss", "huge w": "a big win", "cap": "a lie", "op": "way too strong", "threw": "threw the game",
-  "bot": "bad player", "bots": "bad players", "camping": "hiding and ambushing", "farming": "grinding for",
+  "bot": "bad player", "bots": "bad players", "camping": "hiding and ambushing", "farming": "replaying the same levels to collect", "grinding": "replaying the same thing over and over", "grind": "replay the same thing over and over",
   "roblox:robux": "Roblox money", "roblox:obby": "obstacle course", "roblox:obbies": "obstacle courses",
   "roblox:game pass": "paid upgrade", "roblox:gamepass": "paid upgrade", "roblox:bacon hair": "beginner-looking player",
   "roblox:bacon": "beginner-looking player", "roblox:limiteds": "rare items", "roblox:limited": "rare item",
@@ -1338,6 +1338,37 @@ function inlineFor(e) {
   return e[1].replace(/\s*\([^)]*\)/g, "").replace(/\?$/, "").trim();
 }
 
+// A short note added in brackets the first time a game name or term shows up,
+// so the sentence explains itself without the word list.
+const EXPLAIN = {
+  "roblox:brookhaven": "a pretend-town game", "roblox:doors": "a spooky horror game", "roblox:grow a garden": "a gardening game",
+  "roblox:adopt me": "a pet-raising game", "roblox:blox fruits": "a pirate adventure game", "roblox:bloxburg": "a house-building game",
+  "roblox:mm2": "a whodunit game", "roblox:dti": "a fashion contest game", "roblox:dress to impress": "a fashion contest game",
+  "roblox:pls donate": "a game about asking for Robux",
+  "fortnite:tilted towers": "a busy town on the map", "fortnite:tilted": "a busy town on the map", "fortnite:storm": "the shrinking danger zone",
+  "fortnite:the storm": "the shrinking danger zone",
+  "minecraft:creeper": "a monster that sneaks up and explodes", "minecraft:creepers": "monsters that sneak up and explode",
+  "minecraft:ender dragon": "the final boss", "minecraft:nether": "the fire world", "minecraft:the end": "the final world",
+  "minecraft:enderman": "a teleporting monster", "minecraft:endermen": "teleporting monsters", "minecraft:netherite": "the strongest material",
+  "cod:nuke": "the top reward for a long streak", "cod:tdm": "teams battling each other", "cod:gulag": "a one-on-one duel for a second life",
+  "cod:warzone": "the big last-team-standing mode",
+  "clash:mega knight": "a giant jumping knight that's famously annoying", "clash:mk": "a giant jumping knight that's famously annoying", "clash:hog": "a card of a man riding a pig",
+  "clash:hog rider": "a card of a man riding a pig", "clash:clan wars": "team battles with their group", "clash:pekka": "a heavy armored card",
+  "clash:x-bow": "a giant crossbow card", "clash:log": "a rolling-log card", "clash:elixir": "the energy for playing cards",
+  "clash:gems": "the game's paid currency",
+  "genshin:primogems": "the game's paid currency", "genshin:primos": "the game's paid currency", "genshin:banner": "a limited-time character draw",
+  "genshin:spiral abyss": "the hardest monthly challenge", "genshin:abyss": "the hardest monthly challenge", "genshin:paimon": "the floating guide character",
+  "genshin:emergency food": "a joke nickname", "genshin:leaks": "rumors about upcoming updates", "genshin:welkin": "a cheap subscription",
+  "hsr:stellar jade": "the game's paid currency", "hsr:banner": "a limited-time character draw", "hsr:moc": "the hardest challenge",
+  "hsr:leaks": "rumors about upcoming updates", "hsr:trailblaze power": "the limit on how much you can play each day", "hsr:relics": "items that make characters stronger", "genshin:resin": "the limit on how much you can play each day", "genshin:artifacts": "items that make characters stronger", "hsr:dps": "the character who does the most damage", "genshin:dps": "the character who does the most damage", "hsr:express supply pass": "a cheap subscription",
+  "amongus:electrical": "a dangerous room on the map", "amongus:impostors": "the secret bad guys", "amongus:impostor": "the secret bad guy",
+  "amongus:imposter": "the secret bad guy", "amongus:crewmates": "regular players", "amongus:crewmate": "a regular player",
+  "amongus:emergency meeting": "a group vote", "amongus:reactor": "an emergency spot",
+  "brawl:solo showdown": "an every-player-for-themselves mode", "brawl:duo showdown": "a two-player team mode",
+  "brawl:hypercharge": "a powered-up super move", "brawl:brawl pass": "a paid season pass", "brawl:gem grab": "a gem-collecting team mode",
+  "brawl:brawl ball": "a soccer-style mode", "brawl:gems": "the game's paid currency"
+};
+
 // ---- grammar tidy-up ----
 // Swapping slang for plain words breaks the grammar around it ("the a ...",
 // "so way too strong"), so this pass fixes the joins and common chat shorthand.
@@ -1393,7 +1424,9 @@ function translateDictionary(text) {
     const e = m.map.get(hit.toLowerCase());
     if (!e) return hit;
     parts.push({ t: text.slice(last, offset) });
-    const rep = forward ? (state.level === 1 ? inlineFor(e) : e[2]) : e[1];
+    let rep = forward ? (state.level === 1 ? inlineFor(e) : e[2]) : e[1];
+    const note = forward && !found.has(e[0].toLowerCase()) && EXPLAIN[state.game + ":" + e[0].toLowerCase()];
+    if (note) rep += " (" + note + ")";
     parts.push({ t: matchCase(hit, rep), orig: hit });
     if (!found.has(e[0].toLowerCase())) found.set(e[0].toLowerCase(), { term: hit, meaning: forward ? e[1] : "becomes “" + e[1] + "”" });
     last = offset + hit.length;
