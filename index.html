@@ -227,6 +227,7 @@ footer { color: var(--muted); font-size: .8rem; text-align: center; padding-top:
   .langgrid .swap svg { transform: rotate(90deg); }
 }
 .output[dir="rtl"] { text-align: right; }
+.langbar .fixed-lang { font: 600 1.05rem/1.25 var(--font-body); color: var(--accent); padding: 12px 14px; background: rgb(255 255 255 / .55); border-radius: 12px; }
 </style>
 </head>
 <body>
@@ -248,7 +249,7 @@ footer { color: var(--muted); font-size: .8rem; text-align: center; padding-top:
   <section class="card langbar" aria-label="Languages">
     <div class="langgrid">
       <label class="pick" id="fromPick"><small id="fromLabel">Translate from</small><span class="selwrap" id="fromSlot"><select id="gameSel" aria-label="Game"><option value="roblox">Roblox</option><option value="minecraft">Minecraft</option><option value="brawl">Brawl Stars</option><option value="fortnite">Fortnite</option><option value="cod">Call of Duty</option><option value="clash">Clash Royale</option><option value="genshin">Genshin Impact</option><option value="hsr">Star Rail</option><option value="amongus">Among Us</option><option value="any">Any game</option></select></span></label>
-      <label class="pick" id="toPick"><small id="toLabel">To</small><span class="selwrap" id="toSlot"><select id="langSel" aria-label="Language"><option value="en">Out-of-touch Adult English</option><option value="es">Español de Adulto Desfasado</option><option value="fr">Français d'Adulte Dépassé</option><option value="pt">Português de Adulto Desatualizado</option><option value="de">Deutsch für ahnungslose Erwachsene</option><option value="it">Italiano da Adulto Fuori dal Mondo</option><option value="zh">脱节大人的中文</option><option value="ja">時代遅れな大人の日本語</option><option value="ko">시대에 뒤처진 어른의 한국어</option><option value="hi">पुराने ज़माने के बड़ों की हिंदी</option><option value="ar">عربية الكبار البعيدين عن العصر</option><option value="vi">Tiếng Việt của Người Lớn Lạc Hậu</option><option value="tl">Tagalog ng Matandang Huli sa Uso</option><option value="ru">Русский для отставших от жизни взрослых</option></select></span></label>
+      <label class="pick" id="toPick"><small id="toLabel">To</small><span class="selwrap" id="toSlot"><div class="fixed-lang" id="langSel">Out-of-touch Adult English</div></span></label>
       <button class="swap" id="swap" type="button" aria-label="Swap direction">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4v14l-4-4M16 20V6l4 4"/></svg>
       </button>
@@ -643,6 +644,8 @@ const FORTNITE = [
   ["gold scar", "the best version of a famous rifle", "the legendary golden rifle"],
   ["og fortnite", "the classic original version of the map", "the beloved original Fortnite of legend"],
   ["the floss", "a famous dance emote", "the world-famous flossing dance"],
+  ["tilted towers", "a famous busy town on the Fortnite map", "the legendary Tilted Towers"],
+  ["tilted", "a famous busy town on the map (Tilted Towers)", "the legendary Tilted Towers"],
   ["arena", "the competitive ranked mode", "the high-stakes arena"],
   ["creative", "player-made maps and mini-games", "the player-built playground"]
 ];
@@ -679,6 +682,7 @@ const COD = [
   ["hit marker", "proof a shot hit", "proof of a direct hit"],
   ["headshot", "a hit to the head (worth extra)", "a perfect precision hit"],
   ["one shot", "knocked out in one hit", "taken out in a single shot"],
+  ["spawn trapping", "keeping the enemy stuck where they come back to life", "trapping the enemy in their own base"],
   ["prefire", "shooting before seeing the enemy because you know where they'll be", "fortune-telling where the enemy will appear"],
   ["flanking", "sneaking around the side to surprise the enemy", "a sneaky surprise attack from the side"],
   ["flank", "sneak around the side to surprise the enemy", "launch a sneaky side attack"],
@@ -1265,6 +1269,120 @@ function matchCase(orig, rep) {
   return rep;
 }
 
+// Short words that fit back into the sentence; the full meaning goes in "Words we decoded".
+// Game names stay as names. A "game:term" key only applies to that game.
+const INLINE = {
+  "gg ez": "good game, that was easy", "lowkey": "honestly", "highkey": "seriously", "tilted": "upset and playing worse", "skin": "outfit", "skins": "outfits",
+  "lol": "haha", "lmao": "haha", "smh": "ugh", "bruh": "come on", "cracked": "amazing", "toxic": "mean",
+  "one more game": "one more game", "meta": "the top strategy", "scammed": "cheated", "trading": "trading",
+  "w": "a win", "l": "a loss", "huge w": "a big win", "cap": "a lie", "op": "way too strong", "threw": "threw the game",
+  "bot": "bad player", "bots": "bad players", "camping": "hiding and ambushing", "farming": "grinding for",
+  "roblox:robux": "Roblox money", "roblox:obby": "obstacle course", "roblox:obbies": "obstacle courses",
+  "roblox:game pass": "paid upgrade", "roblox:gamepass": "paid upgrade", "roblox:bacon hair": "beginner-looking player",
+  "roblox:bacon": "beginner-looking player", "roblox:limiteds": "rare items", "roblox:limited": "rare item",
+  "roblox:brookhaven": "Brookhaven", "roblox:doors": "Doors", "roblox:grow a garden": "Grow a Garden",
+  "roblox:adopt me": "Adopt Me", "roblox:blox fruits": "Blox Fruits", "roblox:bloxburg": "Bloxburg",
+  "roblox:mm2": "Murder Mystery 2", "roblox:dti": "Dress to Impress", "roblox:dress to impress": "Dress to Impress",
+  "roblox:pls donate": "Pls Donate", "roblox:admin abuse": "admins misusing their powers", "roblox:admin": "admin",
+  "roblox:tycoon": "business-building game", "roblox:premium": "Roblox Premium", "roblox:ugc": "player-made items",
+  "fortnite:where we dropping": "where should we land", "fortnite:hot drop": "let's land in the busiest spot,",
+  "fortnite:gold scar": "gold rifle", "fortnite:tilted towers": "Tilted Towers", "fortnite:tilted": "Tilted Towers", "fortnite:third partied": "ambushed by another team",
+  "fortnite:third party": "surprise attack from another team", "fortnite:victory royale": "win",
+  "fortnite:zero build": "no-building mode", "fortnite:v-bucks": "Fortnite money", "fortnite:vbucks": "Fortnite money",
+  "fortnite:battle pass": "season pass", "fortnite:item shop": "outfit store", "fortnite:storm": "storm",
+  "fortnite:the storm": "the storm", "fortnite:default": "beginner-looking player", "fortnite:default skin": "free starter outfit",
+  "fortnite:big pot": "big shield potion", "fortnite:minis": "small shield potions", "fortnite:chug jug": "full-heal drink",
+  "minecraft:creeper": "Creeper", "minecraft:creepers": "Creepers", "minecraft:mob farm": "monster farm",
+  "minecraft:smp": "shared server", "minecraft:full netherite": "the strongest armor",
+  "minecraft:elytra": "pair of glider wings", "minecraft:ender dragon": "Ender Dragon", "minecraft:griefing": "wrecking other people's builds",
+  "minecraft:griefer": "player who wrecks other people's builds", "minecraft:server": "server", "minecraft:diamonds": "diamonds",
+  "minecraft:diamond": "diamond", "minecraft:netherite": "netherite", "minecraft:nether": "Nether", "minecraft:the end": "the End",
+  "minecraft:enderman": "Enderman", "minecraft:endermen": "Endermen", "minecraft:redstone": "redstone wiring",
+  "minecraft:hacked client": "cheating version of the game", "minecraft:spawn": "spawn point",
+  "cod:k/d": "knockout ratio", "cod:spawn trapping": "spawn-trapping", "cod:kd": "knockout ratio", "cod:nuke": "Nuke", "cod:tdm": "Team Deathmatch",
+  "cod:gulag": "Gulag duel", "cod:plates": "armor plates", "cod:loadout": "weapon setup", "cod:quickscope": "quick sniper shot,",
+  "cod:headshot": "headshot", "cod:uav": "spy plane", "cod:cod points": "Call of Duty money", "cod:cp": "Call of Duty money",
+  "cod:battle pass": "season pass", "cod:warzone": "Warzone", "cod:br": "battle royale", "cod:killstreak": "killstreak reward",
+  "clash:mega knight": "Mega Knight card", "clash:mk": "Mega Knight card", "clash:three crown": "won by taking all three towers",
+  "clash:3 crown": "won by taking all three towers", "clash:heheheha": "the King's laughing emote", "clash:hog": "Hog Rider",
+  "clash:hog rider": "Hog Rider", "clash:cycle deck": "fast deck", "clash:positive elixir trade": "a good trade",
+  "clash:overtime": "overtime", "clash:pay to win": "pay-to-win", "clash:level 15": "fully upgraded", "clash:deck": "deck",
+  "clash:evo": "card upgrade", "clash:clan wars": "Clan Wars", "clash:gems": "gems", "clash:pekka": "P.E.K.K.A card",
+  "clash:x-bow": "X-Bow card", "clash:log": "Log spell", "clash:elixir": "elixir",
+  "genshin:lost the 50/50": "lost the coin flip for the character I wanted", "hsr:lost the 50/50": "lost the coin flip for the character I wanted",
+  "genshin:won the 50/50": "won the coin flip for the character I wanted", "hsr:won the 50/50": "won the coin flip for the character I wanted",
+  "genshin:pulls": "spins", "hsr:pulls": "spins", "genshin:5 star": "5-star character", "hsr:5 star": "5-star character",
+  "genshin:five star": "5-star character", "hsr:five star": "5-star character", "genshin:welkin": "the monthly pass",
+  "hsr:express supply pass": "the monthly pass", "genshin:primos": "Primogems", "genshin:primogems": "Primogems",
+  "hsr:stellar jade": "Stellar Jade", "genshin:banner": "banner", "hsr:banner": "banner", "genshin:c6": "fully upgraded",
+  "hsr:e6": "fully upgraded", "genshin:spiral abyss": "Spiral Abyss", "genshin:abyss": "Spiral Abyss", "genshin:paimon": "Paimon",
+  "genshin:emergency food": "\"emergency food\"", "genshin:leaks": "leaks", "hsr:leaks": "leaks",
+  "hsr:dps": "damage dealer", "genshin:dps": "damage dealer", "hsr:moc": "Memory of Chaos", "hsr:trailblaze power": "daily energy",
+  "genshin:resin": "daily energy", "hsr:relics": "gear", "genshin:artifacts": "gear", "hsr:warps": "spins", "genshin:wishes": "spins",
+  "amongus:sus": "suspicious", "amongus:vent": "use the vents", "amongus:vented": "used the vents", "amongus:electrical": "Electrical",
+  "amongus:emergency meeting": "Emergency meeting", "amongus:self report": "fake report by the killer",
+  "amongus:hard clear": "confirmed innocent player", "amongus:tasks": "chores", "amongus:fake tasks": "fake chores",
+  "amongus:double kill": "double knockout", "amongus:reactor": "reactor room", "amongus:impostors": "impostors",
+  "amongus:impostor": "impostor", "amongus:imposter": "impostor", "amongus:crewmate": "crewmate", "amongus:crewmates": "crewmates",
+  "brawl:trophy pushing": "climbing the trophy ranks", "brawl:teamers": "players secretly teaming up",
+  "brawl:solo showdown": "Solo Showdown", "brawl:duo showdown": "Duo Showdown", "brawl:hypercharge": "Hypercharge",
+  "brawl:gems": "gems", "brawl:brawl pass": "Brawl Pass", "brawl:brawler": "character", "brawl:brawlers": "characters",
+  "brawl:gem grab": "Gem Grab", "brawl:brawl ball": "Brawl Ball", "brawl:bush camping": "hiding in the bushes",
+  "brawl:mortis main": "go-to character, Mortis,", "brawl:main": "go-to character", "brawl:super": "super attack"
+};
+function inlineFor(e) {
+  const k = e[0].toLowerCase();
+  const own = INLINE[state.game + ":" + k] ?? INLINE[k];
+  if (own != null) return own;
+  // default: the plain meaning without its side notes or question marks
+  return e[1].replace(/\s*\([^)]*\)/g, "").replace(/\?$/, "").trim();
+}
+
+// ---- grammar tidy-up ----
+// Swapping slang for plain words breaks the grammar around it ("the a ...",
+// "so way too strong"), so this pass fixes the joins and common chat shorthand.
+const INTERJECTIONS = new Set(["lowkey", "highkey", "bro", "bruh", "fam", "lol", "lmao", "smh", "sheesh", "oof", "fr", "frfr", "ong", "on god", "no cap", "deadass", "ngl", "tbh", "imo", "fr fr"]);
+const SHORTHAND = [
+  [/\bim\b/gi, "I'm"], [/\bi\b/g, "I"], [/\bu\b/gi, "you"], [/\bur\b/gi, "your"], [/\bdont\b/gi, "don't"],
+  [/\bcant\b/gi, "can't"], [/\bwont\b/gi, "won't"], [/\bdidnt\b/gi, "didn't"], [/\bisnt\b/gi, "isn't"],
+  [/\bthats\b/gi, "that's"], [/\bwhats\b/gi, "what's"], [/\bcuz\b|\bbc\b/gi, "because"], [/\bpls\b|\bplz\b/gi, "please"],
+  [/\brn\b/gi, "right now"], [/\bima\b|\bimma\b/gi, "I'm going to"], [/\bive\b/gi, "I've"], [/\bill\b(?= \w)/g, "I'll"],
+  [/\bya\b/gi, "you"], [/\bgonna\b/gi, "going to"], [/\bwanna\b/gi, "want to"], [/\bkinda\b/gi, "kind of"]
+];
+const DETERMINER_END = /\b(a|an|the|my|your|his|her|our|their|this|that|these|those|some|no|every)\s+$/i;
+const LEADING_ARTICLE = /^(a|an|the)\s+/i;
+const INTENSIFIER_END = /\b(so|very|really|too|super|mad|hella|pretty)\s+$/i;
+const ALREADY_INTENSE = /^(way too|very|so|really|too|extremely|incredibly|completely|badly|the best|just|kind of|unfairly|terrifyingly|embarrassingly)\b/i;
+const GOT_END = /\b(got|get|gets)\s+$/i;
+const ACTIVE_PAST = /^(destroyed|won|lost|did|made|saved|hit|beat the|knocked out the)\b/i;
+
+function tidyParts(parts) {
+  for (const p of parts) if (!p.orig) for (const [re, to] of SHORTHAND) p.t = p.t.replace(re, to);
+  for (let i = 0; i < parts.length; i++) {
+    const p = parts[i];
+    if (!p.orig) continue;
+    const prev = parts[i - 1], next = parts[i + 1];
+    if (prev) {
+      if (DETERMINER_END.test(prev.t) && LEADING_ARTICLE.test(p.t)) p.t = p.t.replace(LEADING_ARTICLE, "");
+      if (INTENSIFIER_END.test(prev.t) && ALREADY_INTENSE.test(p.t)) prev.t = prev.t.replace(INTENSIFIER_END, "");
+      if (GOT_END.test(prev.t) && ACTIVE_PAST.test(p.t)) prev.t = prev.t.replace(GOT_END, "");
+      if (/\ba\s+$/i.test(prev.t) && /^[aeiou]/i.test(p.t)) prev.t = prev.t.replace(/\b(a)(\s+)$/i, (_, a, s) => (a === "A" ? "An" : "an") + s);
+      if (/\ban\s+$/i.test(prev.t) && /^[^aeiou\s]/i.test(p.t)) prev.t = prev.t.replace(/\b(an)(\s+)$/i, (_, a, s) => (a === "An" ? "A" : "a") + s);
+    }
+    if (INTERJECTIONS.has(p.orig.toLowerCase())) {
+      // set chat fillers off with commas so the sentence still reads
+      if (prev && /[\w)]\s+$/.test(prev.t)) prev.t = prev.t.replace(/\s+$/, ", ");
+      else if (prev && /^\s+$/.test(prev.t) && parts[i - 2] && /[\w)]$/.test(parts[i - 2].t)) prev.t = ", ";
+      if (next && /^\s+[\w(]/.test(next.t)) next.t = "," + next.t;
+    }
+  }
+  // collapse spaces and doubled articles left over from the joins
+  for (const p of parts) p.t = p.t.replace(/ {2,}/g, " ");
+  const lastText = [...parts].reverse().find((p) => p.t.trim());
+  if (lastText && /[\w)]\s*$/.test(lastText.t)) lastText.t = lastText.t.replace(/\s*$/, ".");
+  return parts;
+}
+
 function translateDictionary(text) {
   const forward = !state.reverse;
   const list = forward ? entriesFor(state.game) : dedupe([...(REVERSE_GAME[state.game] || []), ...REVERSE_GENERAL]);
@@ -1275,18 +1393,20 @@ function translateDictionary(text) {
     const e = m.map.get(hit.toLowerCase());
     if (!e) return hit;
     parts.push({ t: text.slice(last, offset) });
-    const rep = forward ? (state.level === 1 ? e[1] : e[2]) : e[1];
+    const rep = forward ? (state.level === 1 ? inlineFor(e) : e[2]) : e[1];
     parts.push({ t: matchCase(hit, rep), orig: hit });
     if (!found.has(e[0].toLowerCase())) found.set(e[0].toLowerCase(), { term: hit, meaning: forward ? e[1] : "becomes “" + e[1] + "”" });
     last = offset + hit.length;
     return hit;
   });
   parts.push({ t: text.slice(last) });
+  if (forward) tidyParts(parts);
   // capitalise the first letter of each sentence for readability
   let startOfSentence = true;
   for (const p of parts) {
     if (!p.t) continue;
     if (startOfSentence) p.t = p.t.replace(/^(\s*)([a-z])/, (_, s, c) => s + c.toUpperCase());
+    if (!p.orig) p.t = p.t.replace(/([.!?]\s+)([a-z])/g, (_, s, c) => s + c.toUpperCase());
     startOfSentence = /[.!?]\s*$/.test(p.t) || (startOfSentence && !p.t.trim());
   }
   return { parts, glossary: [...found.values()] };
@@ -1400,7 +1520,6 @@ function renderExamples() {
 
 function renderLangs() {
   $("gameSel").value = state.game;
-  $("langSel").value = state.lang;
   (state.reverse ? $("fromSlot") : $("toSlot")).appendChild($("langSel"));
   (state.reverse ? $("toSlot") : $("fromSlot")).appendChild($("gameSel"));
   $("swap").classList.toggle("flipped", state.reverse);
@@ -1518,7 +1637,6 @@ function toast(msg) {
 
 try {
   const g = localStorage.getItem("gt-game"); if (g && GAMES[g]) state.game = g;
-  const lg = localStorage.getItem("gt-lang"); if (lg && LANGS[lg]) state.lang = lg;
 } catch (e) {}
 input.value = EXAMPLES[state.game][0];
 renderLangs(); renderExamples(); render();
