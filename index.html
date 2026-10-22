@@ -1422,45 +1422,76 @@ function setInput(text) {
 }
 
 // ---- live recording ----
+// Phones (Android Chrome especially) resend the whole phrase again and again in
+// "continuous" mode, which duplicated words. So each listening session hears one
+// phrase, we keep only its final text, and start a fresh session until Stop.
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-let rec = null;
-function stopRecording() { if (rec) rec.stop(); }
-recBtn.onclick = () => {
-  if (rec) { stopRecording(); return; }
-  if (!SR) {
-    status("This browser can't listen live. Tap the microphone key on your keyboard instead, or upload a recording.");
-    return;
-  }
+let rec = null, wantListening = false, committed = "", lastPhrase = "", failed = false;
+function stopRecording() {
+  wantListening = false;
+  if (rec) rec.stop();
+}
+function finishRecording() {
+  rec = null;
+  recBtn.classList.remove("live");
+  recLabel.textContent = "Record";
+  if (!failed) status("");
+}
+function listenOnce() {
   rec = new SR();
-  rec.continuous = true;
+  rec.continuous = false;
   rec.interimResults = true;
   rec.lang = "en-US";
-  const base = input.value.trim() && !Object.values(EXAMPLES).flat().includes(input.value) ? input.value.trimEnd() + " " : "";
+  let phrase = "";
   rec.onresult = (e) => {
-    let heard = "";
-    for (let i = 0; i < e.results.length; i++) heard += e.results[i][0].transcript + (e.results[i].isFinal ? " " : "");
-    setInput(base + heard);
+    const res = e.results[e.results.length - 1];
+    phrase = res[0].transcript.trim();
+    if (res.isFinal) {
+      // skip a phrase the browser reports twice in a row
+      if (phrase && phrase.toLowerCase() !== lastPhrase.toLowerCase()) {
+        committed += phrase + " ";
+        lastPhrase = phrase;
+      }
+      phrase = "";
+    }
+    setInput(committed + phrase);
   };
   rec.onerror = (e) => {
     if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+      failed = true; wantListening = false;
       status("The microphone is blocked. Allow microphone access for this site in your browser settings, then tap Record again.");
     } else if (e.error !== "no-speech" && e.error !== "aborted") {
+      failed = true; wantListening = false;
       status("Listening stopped because of a problem (" + e.error + "). Tap Record to try again.");
     }
   };
   rec.onend = () => {
-    rec = null;
-    recBtn.classList.remove("live");
-    recLabel.textContent = "Record";
-    if (!boxText.textContent.startsWith("The microphone") && !boxText.textContent.startsWith("Listening stopped")) status("");
+    if (phrase && phrase.toLowerCase() !== lastPhrase.toLowerCase()) { committed += phrase + " "; lastPhrase = phrase; setInput(committed); }
+    if (wantListening) {
+      try { listenOnce(); } catch (err) { finishRecording(); }
+    } else {
+      finishRecording();
+    }
   };
+  rec.start();
+}
+recBtn.onclick = () => {
+  if (rec || wantListening) { stopRecording(); return; }
+  if (!SR) {
+    status("This browser can't listen live. Tap the microphone key on your keyboard instead, or upload a recording.");
+    return;
+  }
+  const keep = input.value.trim() && !Object.values(EXAMPLES).flat().includes(input.value);
+  committed = keep ? input.value.trimEnd() + " " : "";
+  if (!keep) setInput("");
+  lastPhrase = ""; failed = false; wantListening = true;
   try {
-    rec.start();
+    listenOnce();
     recBtn.classList.add("live");
     recLabel.textContent = "Stop";
     status("Listening... hold your phone near the game chat.", { busy: true, stoppable: true });
   } catch (err) {
-    rec = null;
+    wantListening = false; rec = null;
     status("Couldn't start listening. Tap Record to try again.");
   }
 };
