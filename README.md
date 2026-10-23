@@ -1,6 +1,6 @@
 # Gamer Translator
 
-A mobile-first website that turns what kids say while gaming into Out-of-touch Adult English, and back again.
+A mobile-first website that turns what kids say while gaming into Out-of-Touch Adult English, and back again.
 
 - Pick a game: Roblox, Minecraft, Brawl Stars, Fortnite, Call of Duty, Clash Royale, Genshin Impact, Star Rail, Among Us, or Any game.
 - Choose "Just the facts" or the funny "Over the top" translation.

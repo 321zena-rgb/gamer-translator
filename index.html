@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Translate what kids say while gaming into Out-of-touch Adult English.">
+<meta name="description" content="Translate what kids say while gaming into Out-of-Touch Adult English.">
 <title>Gamer Translator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -252,7 +252,7 @@ footer a:hover { text-decoration: underline; }
   <section class="card langbar" aria-label="Languages">
     <div class="langgrid">
       <label class="pick" id="fromPick"><small id="fromLabel">Translate from</small><span class="selwrap" id="fromSlot"><select id="gameSel" aria-label="Game"><option value="roblox">Roblox</option><option value="minecraft">Minecraft</option><option value="brawl">Brawl Stars</option><option value="fortnite">Fortnite</option><option value="cod">Call of Duty</option><option value="clash">Clash Royale</option><option value="genshin">Genshin Impact</option><option value="hsr">Star Rail</option><option value="amongus">Among Us</option><option value="any">Any game</option></select></span></label>
-      <label class="pick" id="toPick"><small id="toLabel">To</small><span class="selwrap" id="toSlot"><div class="fixed-lang" id="langSel">Out-of-touch Adult English</div></span></label>
+      <label class="pick" id="toPick"><small id="toLabel">To</small><span class="selwrap" id="toSlot"><div class="fixed-lang" id="langSel">Out-of-Touch Adult English</div></span></label>
       <button class="swap" id="swap" type="button" aria-label="Swap direction">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4v14l-4-4M16 20V6l4 4"/></svg>
       </button>
@@ -1179,8 +1179,8 @@ const REVERSE_EXAMPLES = [
 const INTROS = [
   "Brace yourself. Your child reports the following:",
   "Breaking news from the living room:",
-  "Dearest Out-of-touch Adult, gather round for a tale of great struggle:",
-  "Attention, Out-of-touch Adult. Translation incoming:",
+  "Dearest Out-of-Touch Adult, gather round for a tale of great struggle:",
+  "Attention, Out-of-Touch Adult. Translation incoming:",
   "This just in, straight from the headset:"
 ];
 const OUTROS = [
@@ -1193,7 +1193,7 @@ const OUTROS = [
 const $ = (id) => document.getElementById(id);
 const state = { game: "roblox", level: 1, reverse: false, ai: null, lang: "en" };
 
-// "Out-of-touch Adult" in each language; mt is the code the translation service uses
+// "Out-of-Touch Adult" in each language; mt is the code the translation service uses
 const LANGS = {
   en: { name: "English", mt: "en" }, es: { name: "Spanish", mt: "es" }, fr: { name: "French", mt: "fr" },
   pt: { name: "Portuguese", mt: "pt" }, de: { name: "German", mt: "de" }, it: { name: "Italian", mt: "it" },
@@ -1464,7 +1464,7 @@ function render() {
   output.classList.toggle("reverse-out", state.reverse);
   if (!text.trim()) {
     output.classList.add("placeholder");
-    output.textContent = state.reverse ? "Their version will appear here." : "The grown-up version will appear here.";
+    output.textContent = state.reverse ? "Their version will appear here." : "The Out-of-Touch Adult English version will appear here.";
     setSource(false);
     renderGlossary([]);
     $("ask").hidden = true;
