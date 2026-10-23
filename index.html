@@ -1348,7 +1348,7 @@ function inlineFor(e) {
   return e[1].replace(/\s*\([^)]*\)/g, "").replace(/\?$/, "").trim();
 }
 
-// A short note added in brackets the first time a game name or term shows up,
+// A short note added in brackets every time a game name or term shows up,
 // so the sentence explains itself without the word list.
 const EXPLAIN = {
   "roblox:brookhaven": "a pretend-town game", "roblox:doors": "a spooky horror game", "roblox:grow a garden": "a gardening game",
@@ -1435,7 +1435,7 @@ function translateDictionary(text) {
     if (!e) return hit;
     parts.push({ t: text.slice(last, offset) });
     let rep = forward ? (state.level === 1 ? inlineFor(e) : e[2]) : e[1];
-    const note = forward && !found.has(e[0].toLowerCase()) && EXPLAIN[state.game + ":" + e[0].toLowerCase()];
+    const note = forward && EXPLAIN[state.game + ":" + e[0].toLowerCase()];
     if (note) rep += " (" + note + ")";
     parts.push({ t: matchCase(hit, rep), orig: hit });
     if (!found.has(e[0].toLowerCase())) found.set(e[0].toLowerCase(), { term: hit, meaning: forward ? e[1] : "becomes “" + e[1] + "”" });
