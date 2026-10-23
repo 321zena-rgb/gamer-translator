@@ -265,7 +265,7 @@ footer { color: var(--muted); font-size: .8rem; text-align: center; padding-top:
           <span id="count">0 / 3000</span>
           <span class="tools">
           <button class="ghost" type="button" id="rec">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span id="recLabel">Record</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span id="recLabel">Transcribe</span>
           </button>
           <button class="ghost" type="button" id="upload">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg>Upload
@@ -1713,7 +1713,7 @@ function stopRecording() {
 function finishRecording() {
   rec = null;
   recBtn.classList.remove("live");
-  recLabel.textContent = "Record";
+  recLabel.textContent = "Transcribe";
   if (!failed) status("");
 }
 function listenOnce() {
@@ -1738,10 +1738,10 @@ function listenOnce() {
   rec.onerror = (e) => {
     if (e.error === "not-allowed" || e.error === "service-not-allowed") {
       failed = true; wantListening = false;
-      status("The microphone is blocked. Allow microphone access for this site in your browser settings, then tap Record again.");
+      status("The microphone is blocked. Allow microphone access for this site in your browser settings, then tap Transcribe again.");
     } else if (e.error !== "no-speech" && e.error !== "aborted") {
       failed = true; wantListening = false;
-      status("Listening stopped because of a problem (" + e.error + "). Tap Record to try again.");
+      status("Listening stopped because of a problem (" + e.error + "). Tap Transcribe to try again.");
     }
   };
   rec.onend = () => {
@@ -1771,7 +1771,7 @@ recBtn.onclick = () => {
     status("Listening... hold your phone near the game chat.", { busy: true, stoppable: true });
   } catch (err) {
     wantListening = false; rec = null;
-    status("Couldn't start listening. Tap Record to try again.");
+    status("Couldn't start listening. Tap Transcribe to try again.");
   }
 };
 
