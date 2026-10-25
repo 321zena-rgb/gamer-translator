@@ -270,13 +270,9 @@ footer a:hover { text-decoration: underline; }
           <button class="ghost" type="button" id="rec">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span id="recLabel">Transcribe</span>
           </button>
-          <button class="ghost" type="button" id="upload">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg>Upload
-          </button>
           <button class="ghost" type="button" id="clear" aria-label="Clear">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
           </button>
-          <input type="file" id="file" accept="audio/*,video/*" hidden>
           </span>
         </div>
       </div>
@@ -1907,13 +1903,10 @@ if (window.claude && window.claude.use) {
 }
 </script>
 <script type="module">
-// Live listening uses the browser's own speech recognition; uploaded files are
-// transcribed on the device with a small Whisper model, so no audio leaves the phone.
-const TRANSFORMERS_URL = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2";
-const MODEL = "Xenova/whisper-tiny.en";
+// Live listening uses the browser's own speech recognition.
 const MAX = 3000;
 
-const recBtn = $("rec"), recLabel = $("recLabel"), fileInput = $("file");
+const recBtn = $("rec"), recLabel = $("recLabel");
 const box = $("audioStatus"), boxText = $("audioText"), spin = $("audioSpin"), stopBtn = $("audioStop");
 
 function status(text, { busy = false, stoppable = false } = {}) {
@@ -1985,7 +1978,7 @@ function listenOnce() {
 recBtn.onclick = () => {
   if (rec || wantListening) { stopRecording(); return; }
   if (!SR) {
-    status("This browser can't listen live. Tap the microphone key on your keyboard instead, or upload a recording.");
+    status("This browser can't listen live. Tap the microphone key on your keyboard instead.");
     return;
   }
   const keep = input.value.trim() && !Object.values(EXAMPLES).flat().includes(input.value);
@@ -2000,67 +1993,6 @@ recBtn.onclick = () => {
   } catch (err) {
     wantListening = false; rec = null;
     status("Couldn't start listening. Tap Transcribe to try again.");
-  }
-};
-
-// ---- uploaded recordings ----
-let asrPromise = null;
-function getAsr() {
-  if (!asrPromise) {
-    asrPromise = import(TRANSFORMERS_URL).then(({ pipeline }) =>
-      pipeline("automatic-speech-recognition", MODEL, {
-        progress_callback: (p) => {
-          if (p.status === "progress" && /\.onnx$/.test(p.file || "")) {
-            status("Downloading the listening engine (first time only)... " + Math.round(p.progress || 0) + "%", { busy: true });
-          }
-        }
-      })
-    ).catch((err) => { asrPromise = null; throw err; });
-  }
-  return asrPromise;
-}
-
-async function decodeTo16k(file) {
-  const AC = window.AudioContext || window.webkitAudioContext;
-  const ctx = new AC();
-  const decoded = await ctx.decodeAudioData(await file.arrayBuffer());
-  if (ctx.close) ctx.close();
-  const off = new OfflineAudioContext(1, Math.ceil(decoded.duration * 16000), 16000);
-  const src = off.createBufferSource();
-  src.buffer = decoded;
-  src.connect(off.destination);
-  src.start();
-  const rendered = await off.startRendering();
-  return { samples: rendered.getChannelData(0), seconds: decoded.duration };
-}
-
-$("upload").onclick = () => { stopRecording(); fileInput.click(); };
-fileInput.onchange = async () => {
-  const file = fileInput.files[0];
-  fileInput.value = "";
-  if (!file) return;
-  recBtn.disabled = true; $("upload").disabled = true;
-  try {
-    status("Opening " + file.name + "...", { busy: true });
-    let audio;
-    try { audio = await decodeTo16k(file); }
-    catch (err) { status("That file couldn't be opened. Try an MP3, M4A, WAV or video recording."); return; }
-    status("Getting the listening engine ready...", { busy: true });
-    let asr;
-    try { asr = await getAsr(); }
-    catch (err) { status("The listening engine didn't download. Check the internet connection and try again."); return; }
-    const mins = Math.max(1, Math.round(audio.seconds / 60));
-    status("Listening to the recording (" + mins + " min). This can take a minute or two...", { busy: true });
-    const out = await asr(audio.samples, { chunk_length_s: 30, stride_length_s: 5 });
-    const text = (out && out.text ? out.text : "").trim();
-    if (!text) { status("No talking was found in that recording."); return; }
-    setInput(text);
-    status("");
-    toast("Recording transcribed");
-  } catch (err) {
-    status("Something went wrong while listening to that file. Try a shorter recording.");
-  } finally {
-    recBtn.disabled = false; $("upload").disabled = false;
   }
 };
 
